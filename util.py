@@ -4,24 +4,21 @@ import numpy as np
 import pickle
 import json
 import math
-from pandas.api.types import is_numeric_dtype
-from matplotlib import pyplot
-from scipy import stats
 from tqdm import tqdm
+
+from pandas.api.types import is_numeric_dtype
+from scipy import stats
 from matplotlib import pyplot
 from types import SimpleNamespace
 from functools import reduce
-import itertools
 
 from sklearn.metrics import confusion_matrix
-from sklearn.datasets import fetch_california_housing, fetch_covtype, load_digits
+from sklearn.datasets import fetch_california_housing
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, MinMaxScaler, OrdinalEncoder
-from sklearn import metrics
 
 import warnings
 warnings.filterwarnings("ignore")
 sys.path.append('reprosyn-main/src/reprosyn/methods/mbi/')
-
 
 sys.path.append('relaxed-adaptive-projection/relaxed_adaptive_projection/')
 import rap
@@ -42,48 +39,87 @@ from utils_data import data_sources, ohe_to_categorical
 DATA_DIR = "/Users/golobs/Documents/GradSchool/"
 
 
-# Experimental parameters
+# Experimental Configuration
+class Config:
+    def __init__(
+            self,
+            data_name,
+            n_runs_MA=10,
+            train_sizes={100: 10, 316: 26, 1_000: 64, 3162: 160, 10_000: 400, 31_622: 1000},
+            train_size=1_000,
+            set_MI=True,
+            household_min_size=4,
+            epsilons=list(reversed([round(10 ** x, 2) for x in np.arange(-1, 3.1, 1 / 3)])),
+
+            # RAP parameters
+            rap_k=3,
+            rap_epochs=10,
+            rap_top_q=200,
+            rap_all_queries=False,
+            rap_iterations=2000,
+            rap_use_FP_threshold=2,
+            num_kways=64,
+            use_subset_of_kways=False,
+            seed=None,
+    ):
+        self.data_name = data_name
+        self.n_runs_MA = n_runs_MA
+        self.train_sizes = train_sizes
+        self.train_size = train_size
+        self.synth_size = train_size
+        self.num_targets = train_sizes[train_size]
+        self.num_members = train_sizes[train_size] // 2
+        self.set_MI = set_MI
+        self.household_min_size = household_min_size
+        self.epsilons = epsilons
+        self.rap_k = rap_k
+        self.rap_epochs = rap_epochs
+        self.rap_top_q = rap_top_q
+        self.rap_all_queries = rap_all_queries
+        self.rap_iterations = rap_iterations
+        self.rap_use_FP_threshold = rap_use_FP_threshold
+        self.num_kways = num_kways
+        self.use_subset_of_kways = use_subset_of_kways
+        self.seed = seed
+
+    def get_filename(self, task, use_RAP_config=False):
+        MI_type = 'set' if self.set_MI else 'single'
+        filename = f"{task}_results_{self.data_name}_{C.n_bins}_{MI_type}MI_{self.train_size}"
+        if use_RAP_config:
+            filename += f"_RAP_{self.rap_top_q}_{self.rap_k}_{self.rap_epochs}_{self.num_kways}_{self.use_subset_of_kways}"
+        return filename
+
+
+# constants
 C = SimpleNamespace(
     verbose=False,
-    n_runs_MA=10,
-    n_baskets=10,
-    train_size=1_00,
-    synth_size=1_00, # Do not make synth > train or nothing will generate
-    num_targets=10,
-    num_members=5,
-    set_MI=True,
-    household_min_size=5,
-    # epsilons=[1, 10, 100, 1000],
-    epsilons=[10 ** x for x in np.arange(-1, 3.1, 1 / 3)],
-    
+    n_bins=10,
+    n_runs=50,
+
     # shadow modelling
-    shadow_epsilons=[100000],
-    n_shadow_runs=10,
+    shadow_epsilons=[round(10 ** x, 2) for x in np.arange(-1, 3.1)],
+    n_shadow_runs=30,
     shadow_train_size=10_000,
+    shadow_synth_size=10_000,
 
     # KDE
     use_categorical_features=True,
     samples_append_targets=False,
-
-    # RAP parameters
-    rap_k=3,
-    rap_epochs=10,
-    rap_top_q=500,
-    rap_all_queries=False,
-    rap_iterations=1000,
     rap_bucket_numeric=True,
-    rap_use_FP_threshold=5,
-    num_kways=24,
-    use_subet_of_kways=True,
-    seed=None,
 )
 
 
+
+
 ############################################______________________________________________
 ############################################______________________________________________
 ############################################______________________________________________
 
-
+def make_FP_filename(cfg, sdg, eps):
+    filename = f"FP_{cfg.data_name}_{sdg}_{'{0:.2f}'.format(eps)}_{C.n_bins}_{cfg.rap_k}_{cfg.set_MI}"
+    if sdg == "RAP":
+        filename += f"_{cfg.rap_top_q}_{cfg.rap_k}_{cfg.rap_epochs}_{cfg.num_kways}_{cfg.use_subset_of_kways}"
+    return filename
 
 def membership_advantage(y_true, scores):
     y_pred = scores > .5
@@ -102,32 +138,38 @@ def dump_artifact(artifact, name):
     pickle_file.close()
 
 def load_artifact(name):
-    pickle_file = open(DATA_DIR + f'Thesis/experiment_artifacts/{name}', 'rb')
-    artifact = pickle.load(pickle_file)
-    pickle_file.close()
-    return artifact
+    try:
+        pickle_file = open(DATA_DIR + f'Thesis/experiment_artifacts/{name}', 'rb')
+        artifact = pickle.load(pickle_file)
+        pickle_file.close()
+        return artifact
+    except:
+        return None
 
 def activate_1(p_rel, confidence=1, center=True) -> np.ndarray:
     logs = np.log(p_rel)
     median = np.median(logs) if center else 0
     probabilities = 1 / (1 + np.exp(-1 * confidence * (logs - median)))
     return probabilities
+
 def activate_2(p_rel, confidence=1, center=True) -> np.ndarray:
     zscores = stats.zscore(p_rel)
     median = np.median(zscores) if center else 0
     probabilities = 1 / (1 + np.exp(-1 * confidence * (zscores - median)))
     return probabilities
+
 def activate_3(p_rel, confidence=1, center=True) -> np.ndarray:
     logs = np.log(p_rel)
     zscores = stats.zscore(logs)
     median = np.median(zscores) if center else 0
     probabilities = 1 / (1 + np.exp(-1 * confidence * (zscores - median)))
     return probabilities
+
 def activate_4(p_rel, confidence=1, center=True) -> np.ndarray:
     median = np.median(p_rel) if center else 0
     probabilities = 1 / (1 + np.exp(-1 * confidence * (p_rel - median)))
     return probabilities
-#
+
 def convert_finite_ordered_to_numeric(df):
     meta = pd.read_json(DATA_DIR + "SNAKE/meta.json")
     df_new = df.copy()
@@ -145,27 +187,21 @@ def revert_finite_ordered_to_numeric(df):
         df_new[col] = df_new[col].astype(np.str_)
     return df_new
 
-
-## TODO: verify this is working correctly!
-
 def fit_continuous_features_equaldepth(aux_data, name):
-    n_per_basket = aux_data.shape[0] // C.n_baskets
+    n_per_basket = aux_data.shape[0] // C.n_bins
     thresholds = {}
     for col in aux_data.columns:
         vals = sorted(aux_data[col].values)
         thresholds[col] = [vals[i] for i in range(0, aux_data.shape[0], n_per_basket)]
-    dump_artifact(thresholds, f"{name}_thresholds_for_continuous_features_{C.n_baskets}")
+    dump_artifact(thresholds, f"{name}_thresholds_for_continuous_features_{C.n_bins}")
 
 def discretize_continuous_features_equaldepth(data, name):
-    thresholds = load_artifact(f"{name}_thresholds_for_continuous_features_{C.n_baskets}")
+    thresholds = load_artifact(f"{name}_thresholds_for_continuous_features_{C.n_bins}")
     data_copy = pd.DataFrame()
     for col in data.columns:
         data_copy[col] = np.digitize(data[col].values, thresholds[col])
     return data_copy
 
-
-
-# TODO: Preserve one-hot encoding and bucketting thresholds to encode other datasets consistently!
 
 def fit_discrete_features_evenly(name, aux_data, meta, columns):
     meta = pd.DataFrame(meta)
@@ -175,48 +211,44 @@ def fit_discrete_features_evenly(name, aux_data, meta, columns):
         col_data = aux_data[col]
         if is_numeric_dtype(col_data) and C.rap_bucket_numeric:
 
-            # thresholds = list(map(lambda x: x[0], np.array_split(sorted(col_data.values), C.n_baskets)))
-            # basket = np.digitize(col_data, thresholds)
-
-            # if n_baskets doesn't divide the values nicely, then this logic more evenly
-            # distributes the data to baskets than the above logic
-            splits = np.array_split(sorted(col_data.values), C.n_baskets)
-            # basket_edges = [-np.inf] # use -inf so that future outlying values get put into basket 1
-            basket_edges = [0] # use -inf so that future outlying values get put into basket 1
-            for i in range(1, C.n_baskets):
+            # if n_bins doesn't divide the values nicely, then this logic more evenly
+            # distributes the data to bins than the above logic
+            splits = np.array_split(sorted(col_data.values), C.n_bins)
+            basket_edges = [0]
+            for i in range(1, C.n_bins):
                 # don't duplicate basket edges when basket is overfull
                 basket_edges.append(splits[i][0] if splits[i][0] > basket_edges[i-1] else basket_edges[i-1]+1)
             columns_encodings[col] = basket_edges
-            columns_domain[col] = C.n_baskets
+            columns_domain[col] = C.n_bins
         else:
             categories = meta[meta["name"] == col].representation.values[0]
             ohe = OneHotEncoder(categories=[categories]).fit(np.reshape(col_data.to_numpy(), (-1, 1)))
             columns_encodings[col] = ohe
             columns_domain[col] = len(categories)
 
-    dump_artifact(columns_encodings, f"{name}_thresholds_for_discrete_features_{C.n_baskets}bins")
-    dump_artifact(columns_domain, f"{name}_ohe_domain_{C.n_baskets}bins")
+    dump_artifact(columns_encodings, f"{name}_thresholds_for_discrete_features_{C.n_bins}bins")
+    dump_artifact(columns_domain, f"{name}_ohe_domain_{C.n_bins}bins")
 
 
-def binarize_discrete_features_evenly(data_name, data, columns):
-    columns_encodings = load_artifact(f"{data_name}_thresholds_for_discrete_features_{C.n_baskets}bins")
-    columns_domain = load_artifact(f"{data_name}_ohe_domain_{C.n_baskets}bins")
+def binarize_discrete_features_evenly(cfg, data, columns):
+    columns_encodings = load_artifact(f"{cfg.data_name}_thresholds_for_discrete_features_{C.n_bins}bins")
+    columns_domain = load_artifact(f"{cfg.data_name}_ohe_domain_{C.n_bins}bins")
 
     ohe_data = []
     for col in columns:
         col_data = data[col]
         col_encoding = columns_encodings[col]
         if is_numeric_dtype(col_data) and C.rap_bucket_numeric:
-            baskets = np.digitize(col_data, col_encoding)
-            ohe_data.append(np.eye(C.n_baskets)[baskets - 1])
+            bins = np.digitize(col_data, col_encoding)
+            ohe_data.append(np.eye(C.n_bins)[bins - 1])
         else:
             ohe_data.append(col_encoding.transform(np.reshape(col_data.to_numpy(), (-1, 1))).toarray())
 
     return np.hstack(ohe_data), columns_domain
 
-def decode_rap_synth(data_name, columns, meta, synth):
+def decode_rap_synth(cfg, columns, meta, synth):
     meta = pd.DataFrame(meta)
-    columns_encodings = load_artifact(f"{data_name}_thresholds_for_discrete_features_{C.n_baskets}bins")
+    columns_encodings = load_artifact(f"{cfg.data_name}_thresholds_for_discrete_features_{C.n_bins}bins")
     synth_decoded = pd.DataFrame()
 
     for i, col in enumerate(columns):
@@ -224,14 +256,14 @@ def decode_rap_synth(data_name, columns, meta, synth):
         if isinstance(enc, list):
             # decode back into number from bucket
             enc.append(np.inf)
-            buckets = synth[col]
+            bins = synth[col].values
             min_val = int(meta[meta["name"] == col].representation.values[0][0])
             max_val = int(meta[meta["name"] == col].representation.values[0][-1])
             domain = list(zip(
-                np.array([max(a, b) for a, b in zip(np.take(enc, buckets), [min_val]*synth.shape[0])]),
-                np.array([min(c, d) for c, d in zip(np.take(enc, buckets+1), [max_val]*synth.shape[0])])
+                np.array([max(a, b) for a, b in zip(np.take(enc, bins), [min_val]*synth.shape[0])]),
+                np.array([min(c, d) for c, d in zip(np.take(enc, bins+1), [max_val]*synth.shape[0])])
             ))
-            synth_decoded[col] = np.array([np.random.randint(lower, upper) for lower, upper in domain])
+            synth_decoded[col] = np.array([np.random.randint(lower, max(upper, lower+1)) for lower, upper in domain])
         else:
             # de-onehot encode category
             synth_decoded[col] = enc.categories_[0][synth[col]]
@@ -239,27 +271,23 @@ def decode_rap_synth(data_name, columns, meta, synth):
     return synth_decoded
 
 
-
-
-
 def fit_KDE_encoder(data_name, aux, meta, numerical_columns, catg_columns):
     meta = pd.DataFrame(meta)
-    # catg_encoder = OneHotEncoder(categories=[meta[meta["name"] == col].representation.values[0] for col in catg_columns]).fit(aux[catg_columns])
     catg_encoder = OrdinalEncoder(categories=[meta[meta["name"] == col].representation.values[0] for col in catg_columns]).fit(aux[catg_columns])
 
     scalars = {col: MinMaxScaler().fit(aux[[col]]) for col in numerical_columns}
     dump_artifact((catg_encoder, catg_columns), f"KDE_{data_name}_catg_encoder")
-    dump_artifact((scalars, numerical_columns), f"KDE_{data_name}_numerical_encoder_bins{C.n_baskets}")
+    dump_artifact((scalars, numerical_columns), f"KDE_{data_name}_numerical_encoder_bins{C.n_bins}")
 
 
-def encode_data_for_KDE(data_name, aux, synth, targets, target_ids, sample_seed):
+def encode_data_for_KDE(cfg, aux, synth, targets, target_ids, sample_seed):
     # encode data
     # -----------------------------
-    target_exclusion_list = aux.HHID.isin(target_ids) if C.set_MI else aux.index.isin(target_ids)
+    target_exclusion_list = aux.HHID.isin(target_ids) if cfg.set_MI else aux.index.isin(target_ids)
     aux_sample = aux[~target_exclusion_list].sample(n=synth.shape[0], random_state=sample_seed) # TODO: see if density is n-independent (try huge n for aux_sample)
     if C.samples_append_targets: aux_sample = pd.concat([aux_sample, targets]).sample(frac=1) # shuffle
 
-    numeric_encoders, numeric_columns = load_artifact(f"KDE_{data_name}_numerical_encoder_bins{C.n_baskets}")
+    numeric_encoders, numeric_columns = load_artifact(f"KDE_{cfg.data_name}_numerical_encoder_bins{C.n_bins}")
     encoded_synth = pd.DataFrame()
     encoded_targets = pd.DataFrame()
     encoded_aux_sample = pd.DataFrame()
@@ -268,39 +296,35 @@ def encode_data_for_KDE(data_name, aux, synth, targets, target_ids, sample_seed)
         encoded_targets[[col]] = numeric_encoders[col].transform(targets[[col]])
         encoded_aux_sample[[col]] = numeric_encoders[col].transform(aux_sample[[col]])
     if C.use_categorical_features:
-        catg_encoder, catg_columns = load_artifact(f"KDE_{data_name}_catg_encoder")
+        catg_encoder, catg_columns = load_artifact(f"KDE_{cfg.data_name}_catg_encoder")
         if len(catg_columns) > 0:
-            # encoded_synth[catg_encoder.get_feature_names_out()] = catg_encoder.transform(synth[catg_columns]).toarray()
-            # encoded_targets[catg_encoder.get_feature_names_out()] = catg_encoder.transform(targets[catg_columns]).toarray()
-            # encoded_aux_sample[catg_encoder.get_feature_names_out()] = catg_encoder.transform(aux_sample[catg_columns]).toarray()
-            encoded_synth[catg_columns] = catg_encoder.transform(synth[catg_columns])
-            encoded_targets[catg_columns] = catg_encoder.transform(targets[catg_columns])
-            encoded_aux_sample[catg_columns] = catg_encoder.transform(aux_sample[catg_columns])
+            encoded_synth[catg_columns] = MinMaxScaler().fit_transform(catg_encoder.transform(synth[catg_columns]))
+            encoded_targets[catg_columns] = MinMaxScaler().fit_transform(catg_encoder.transform(targets[catg_columns]))
+            encoded_aux_sample[catg_columns] = MinMaxScaler().fit_transform(catg_encoder.transform(aux_sample[catg_columns]))
 
     return encoded_synth, encoded_targets, encoded_aux_sample
 
-
-def get_data(name):
-    if name == "cali":
-        return california_data()
-    if name == "snake":
+def get_data(cfg):
+    if cfg.data_name == "cali":
+        return california_data(cfg)
+    if cfg.data_name == "snake":
         return snake_data()
     return None
 
-def california_data():
+def california_data(cfg):
     columns = [str(x) for x in range(9)]
-    meta = [{"name": col, "representation": list(range(C.n_baskets))} for col in columns] # TODO is this range correct?
+    meta = [{"name": col, "representation": list(range(C.n_bins))} for col in columns] # TODO is this range correct?
     aux_original = pd.DataFrame(StandardScaler().fit_transform(fetch_california_housing(as_frame=True).frame.sample(frac=1)), columns=columns)
-    # aux_original = fetch_california_housing(as_frame=True).frame.sample(frac=1)
 
     fit_continuous_features_equaldepth(aux_original, "cali")
     aux = discretize_continuous_features_equaldepth(aux_original, "cali")
     fit_discrete_features_evenly("cali", aux, pd.DataFrame(meta), columns)
     fit_KDE_encoder("cali", aux, meta, columns, [])
 
-    aux["HHID"] = np.hstack([[i]*C.household_min_size for i in range(math.ceil(aux.shape[0] / C.household_min_size))])[:aux.shape[0]]
-    meta = [{'name': str(col), 'type': 'finite/ordered', 'representation': range(C.n_baskets)} for col in columns]
+    aux["HHID"] = np.hstack([[i]*cfg.household_min_size for i in range(math.ceil(aux.shape[0] / cfg.household_min_size))])[:aux.shape[0]]
+    meta = [{'name': str(col), 'type': 'finite/ordered', 'representation': range(C.n_bins)} for col in columns]
     return None, aux, columns, meta, "cali"
+
 
 def snake_data():
     with open(DATA_DIR + "SNAKE/meta.json") as f:
@@ -320,21 +344,21 @@ def snake_data():
     return None, aux, columns, meta, "snake"
 
 
-def sample_experimental_data(aux, columns):
-    # determine all 'candidate' households of minimum size for "set membership inference"
+def sample_experimental_data(cfg, aux, columns):
+    # determine all 'candidate' clusters of minimum size for "set membership inference"
     hh_counts = aux['HHID'].value_counts()
-    candidate_households = hh_counts[hh_counts >= C.household_min_size].index
+    candidate_households = hh_counts[hh_counts >= cfg.household_min_size].index
 
-    target_ids = pd.Series(candidate_households).sample(n=C.num_targets) \
-        if C.set_MI else pd.Series(aux.index).sample(n=C.num_targets).values
+    target_ids = pd.Series(candidate_households).sample(n=cfg.num_targets) \
+        if cfg.set_MI else pd.Series(aux.index).sample(n=cfg.num_targets).values
     targets = aux[aux['HHID'].isin(target_ids)] \
-        if C.set_MI else aux[aux.index.isin(target_ids)]
-    member_ids = pd.Series(target_ids).sample(n=C.num_members).values
+        if cfg.set_MI else aux[aux.index.isin(target_ids)]
+    member_ids = pd.Series(target_ids).sample(n=cfg.num_members).values
     members = aux[aux['HHID'].isin(member_ids)] \
-        if C.set_MI else aux[aux.index.isin(member_ids)]
+        if cfg.set_MI else aux[aux.index.isin(member_ids)]
 
-    # aux_sample_no_targets = aux[~aux.isin(target_ids)].sample(n=C.train_size)
-    aux_sample_no_targets = aux[aux.merge(targets.drop_duplicates(), how='left', indicator=True)["_merge"] == "left_only"].sample(n=C.train_size)
+    # aux_sample_no_targets = aux[~aux.isin(target_ids)].sample(n=cfg.train_size)
+    aux_sample_no_targets = aux[aux.merge(targets.drop_duplicates(), how='left', indicator=True)["_merge"] == "left_only"].sample(n=(cfg.train_size-members.shape[0]))
     membership = np.array([1 if c in member_ids else 0 for c in target_ids.tolist()])
     train = pd.concat([aux_sample_no_targets, members]).sample(frac=1)  # sample() to shuffle targets in
 
@@ -369,9 +393,13 @@ def get_queries(columns_domain, kway_attrs, N=None):
 
     return np.array(queries, np.int64)[:num_queries], num_queries
 
-def get_rap_synth(data_name, columns, train_encoded, eps, columns_domain):
+def get_rap_synth(cfg, columns, train_encoded, eps, columns_domain):
+
+    ### This code is copy-pasted from Relaxed-Adaptive-Projection Library, with unused
+    ### segments removed, and constants added that are used by authors (Aydore et al., 2021)
+
     stat_module = __import__("statistickway")
-    n_prime = C.synth_size
+    n_prime = cfg.synth_size
     seed = 0
     categorical_consistency = True
     key = random.PRNGKey(seed)
@@ -379,29 +407,23 @@ def get_rap_synth(data_name, columns, train_encoded, eps, columns_domain):
     delta = 1 / n ** 2
 
     # consider all k-way queries
-    kway_attrs = [p for p in itertools.combinations(columns, C.rap_k)]
-    if C.use_subet_of_kways and len(kway_attrs) > C.num_kways:
-        prng = np.random.RandomState(C.seed) if C.seed is not None else np.random
-        kway_attrs = [kway_attrs[i] for i in prng.choice(len(kway_attrs), C.num_kways, replace=False)]
+    kway_attrs = [p for p in itertools.combinations(columns, cfg.rap_k)]
+    if cfg.use_subset_of_kways and len(kway_attrs) > cfg.num_kways:
+        prng = np.random.RandomState(cfg.seed) if cfg.seed is not None else np.random
+        kway_attrs = [kway_attrs[i] for i in prng.choice(len(kway_attrs), cfg.num_kways, replace=False)]
     kway_compact_queries, _ = get_queries(columns_domain, kway_attrs)
 
     all_statistic_fn = stat_module.preserve_statistic(kway_compact_queries)
     true_statistics = all_statistic_fn(train_encoded)
 
-    # projection_interval = ProjectionInterval(*args.project) if args.project else None
     projection_interval = None
 
-    epochs = min(C.rap_epochs, jnp.ceil(len(true_statistics) / C.rap_top_q).astype(jnp.int32)) \
-        if not C.rap_all_queries else 1
+    epochs = min(cfg.rap_epochs, jnp.ceil(len(true_statistics) / cfg.rap_top_q).astype(jnp.int32)) \
+        if not cfg.rap_all_queries else 1
 
-    if C.rap_all_queries:
+    if cfg.rap_all_queries:
         # ensure consistency w/ top_q for one-shot case (is this correct?)
-        C.rap_top_q = len(true_statistics)
-
-    # # Initial analysis
-    # print("Number of queries: {}".format(len(true_statistics)))
-    # print("Number of epochs: {}".format(epochs))
-    # print("Epsilon: {}".format(eps))
+        cfg.rap_top_q = len(true_statistics)
 
     if categorical_consistency:
         feats_csum = jnp.array([0] + list(columns_domain.values())).cumsum()
@@ -420,16 +442,16 @@ def get_rap_synth(data_name, columns, train_encoded, eps, columns_domain):
         verbose=False,
         silent=False,
         epochs=epochs,
-        iterations=C.rap_iterations,
+        iterations=cfg.rap_iterations,
         epsilon=eps,
         delta=delta,
         norm=Norm('L2'),
         projection_interval=projection_interval,
         optimizer_learning_rate=.001,
         lambda_l1=0,
-        k=C.rap_k,
-        top_q=C.rap_top_q,
-        use_all_queries=C.rap_all_queries,
+        k=cfg.rap_k,
+        top_q=cfg.rap_top_q,
+        use_all_queries=cfg.rap_all_queries,
         rap_stopping_condition=1e-7,
         initialize_binomial=False,
         feats_idx=feats_idx,
@@ -458,8 +480,8 @@ def get_rap_synth(data_name, columns, train_encoded, eps, columns_domain):
     res = [eps, max_final_ohe, l2_final_ohe, l1_final_ohe]
     results = pd.DataFrame([res], columns=names)
 
-    synth_file_name = DATA_DIR + f"Thesis/experiment_artifacts/rap_synth_eps{eps}_{data_name}"
-    results_file_name = DATA_DIR + f"Thesis/experiment_artifacts/rap_synth_results_{data_name}"
+    synth_file_name = DATA_DIR + f"Thesis/experiment_artifacts/rap_synth_eps{'{0:.2f}'.format(eps)}_{cfg.data_name}"
+    results_file_name = DATA_DIR + f"Thesis/experiment_artifacts/rap_synth_results_{cfg.data_name}"
 
     if os.path.exists(results_file_name):
         results_prev = pd.read_csv(results_file_name)
@@ -472,15 +494,13 @@ def get_rap_synth(data_name, columns, train_encoded, eps, columns_domain):
 
     return synth, Dprime_catg, queries_used
 
-def wasserstein_distance(data_name, d1, d2, columns, encode_d2=True):
-    d1 = pd.DataFrame(binarize_discrete_features_evenly(data_name, d1, columns)[0])
-    d2 = pd.DataFrame(binarize_discrete_features_evenly(data_name, d2, columns)[0] if encode_d2 else d2)
+def wasserstein_distance(cfg, d1, d2, columns, encode_d2=True):
+    d1 = pd.DataFrame(binarize_discrete_features_evenly(cfg, d1, columns)[0])
+    d2 = pd.DataFrame(binarize_discrete_features_evenly(cfg, d2, columns)[0] if encode_d2 else d2)
     wd = 0
-    # wd_2 = 0
     ratio = d1.shape[0] / d2.shape[0]
     for col in d1.columns:
         wd += abs(d1[col].sum() - d2[col].sum()*ratio) / d1.shape[0]
-        # wd_2 += stats.wasserstein_distance(d1[col], d2[col])
     return wd
 
 
@@ -500,15 +520,33 @@ def moderate_sequentially(x):
     return x**(1/c)
 
 
-def save_off_intermediate_queries(name, eps, all_queries):
-    query_frequencies = {}
-    for queries in all_queries:
-        for query in queries:
-            query.sort()
-            query = tuple(query.tolist())
-            query_frequencies[query] = query_frequencies.get(query, 0) + 1
+def generate_arbitrary_FPs(columns, num, size_min, size_max):
+    FPs = {}
+    n = len(columns)
+    all_combos = [list(itertools.combinations(columns, l)) for l in range(size_min, size_max+1)]
+    num_combos = sum(len(combos) for combos in all_combos)
+    while len(FPs) < num and len(FPs) < num_combos:
+        size_choice = np.random.randint(size_min, size_max + 1)
+        pick = all_combos[size_choice - size_min][np.random.randint(math.comb(n, size_choice))]
+        FPs[pick] = 1
+    return FPs
 
-    query_frequencies = dict(sorted(query_frequencies.items(), key=lambda x: -x[1]))
-    dump_artifact(query_frequencies, f"FP_{name}_RAP_eps{eps}_bins{C.n_baskets}_k{C.rap_k}")
+def save_off_intermediate_FPs(cfg, eps, all_FPs, sdg):
+    filename = make_FP_filename(cfg, sdg, eps)
+    FP_frequencies = load_artifact(filename) or {}
+    for FPs in all_FPs:
+        for FP in FPs:
+            attrs = np.array(FP).tolist()
+            attrs.sort()
+            FP_tuple = tuple(attrs)
+            FP_frequencies[FP_tuple] = FP_frequencies.get(FP_tuple, 0) + 1
 
+    FP_frequencies = dict(sorted(FP_frequencies.items(), key=lambda x: -x[1]))
+    dump_artifact(FP_frequencies, filename)
 
+def plot_output(scores):
+    if C.verbose:
+        bins = np.linspace(0, 1, 50)
+        pyplot.hist(scores, bins)
+        pyplot.legend(loc='upper right')
+        pyplot.show()
