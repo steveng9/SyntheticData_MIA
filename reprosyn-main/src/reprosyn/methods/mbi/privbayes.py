@@ -1,3 +1,4 @@
+import sys
 from privBayes import privBayesSelect
 from matrix import Identity
 
@@ -8,7 +9,6 @@ import numpy as np
 import pandas as pd
 
 from mbi import Dataset, Domain, Factor
-import sys
 sys.path.insert(1, 'reprosyn-main/src/reprosyn/')
 from generator import PipelineBase, encode_ordinal, decode_ordinal
 

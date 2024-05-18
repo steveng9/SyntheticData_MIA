@@ -13,14 +13,16 @@ import json
 import networkx as nx
 import numpy as np
 from disjoint_set import DisjointSet
-from mbi import Dataset, Domain, FactoredInference
 from scipy import sparse
 from scipy.special import logsumexp
 
 from cdp2adp import cdp_rho
+from mbi import Dataset, Domain, FactoredInference
 import sys
 sys.path.insert(1, 'reprosyn-main/src/reprosyn/')
 from generator import PipelineBase, encode_ordinal, decode_ordinal
+
+# sys.path.insert(1, 'methods')
 
 
 def mst(data, epsilon, delta, rows):
