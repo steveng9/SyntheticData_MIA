@@ -34,8 +34,8 @@ C = SimpleNamespace(
     shadow_epsilons=list(reversed([round(10 ** x, 2) for x in np.arange(-1, 3.1)])),
     # shadow_epsilons=[1000, 100, 10],
     n_shadow_runs=50,
-    shadow_train_size=1_000,
-    shadow_synth_size=1_000,
+    shadow_train_size=10_000,
+    shadow_synth_size=10_000,
 
     # KDE
     use_categorical_features=True,

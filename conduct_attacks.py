@@ -28,36 +28,56 @@ from util import *
 
 def attack_experiments(sdgs, cfg):
 
-    _, aux, columns, meta, _ = get_data(cfg)
-    results_filename = cfg.get_filename("MA", use_RAP_config=True)
+    _, full_aux, columns, meta, _ = get_data(cfg)
 
-    results = load_artifact(results_filename) or {
-    eps: {
-        sdg: {
-            "KDE_MA": [],
-            "KDE_AUC": [],
-            "KDE_time": [],
-            "custom_MA": [],
-            "custom_AUC": [],
-            "custom_MA_weighted": [],
-            "custom_AUC_weighted": [],
-            "custom_time": [],
-            "arbitrary_MA": [],
-            "distance": []
-        } for sdg in sdgs.keys()
-    } for eps in cfg.epsilons}
+    results_filename = cfg.get_filename("MA_mst_priv", use_RAP_config=True, overlap=cfg.overlapping_aux)
+
+    results = load_artifact(results_filename) or {}
+    for eps in cfg.epsilons:
+        if eps not in results:
+            results[eps] = {}
+        for sdg in sdgs.keys():
+            if sdg not in results[eps]:
+                results[eps][sdg] = {
+                    "KDE_MA": [],
+                    "KDE_AUC": [],
+                    "KDE_time": [],
+                    "custom_MA": [],
+                    "custom_AUC": [],
+                    "custom_MA_weighted": [],
+                    "custom_AUC_weighted": [],
+                    "custom_time": [],
+                    "arbitrary_MA": [],
+                    "distance": []
+                }
+    # results = load_artifact(results_filename) or {
+    # eps: {
+    #     sdg: {
+    #         "KDE_MA": [],
+    #         "KDE_AUC": [],
+    #         "KDE_time": [],
+    #         "custom_MA": [],
+    #         "custom_AUC": [],
+    #         "custom_MA_weighted": [],
+    #         "custom_AUC_weighted": [],
+    #         "custom_time": [],
+    #         "arbitrary_MA": [],
+    #         "distance": []
+    #     } for sdg in sdgs.keys()
+    # } for eps in cfg.epsilons}
 
     print(f"\n{cfg.data_name}, {cfg.set_MI}, EPS: ", end="")
     for eps in cfg.epsilons:
-        print(eps, end=", ")
+        print(eps)
 
         # use same sample for each sdg
-        target_ids, targets, membership, train, kde_sample_seed = sample_experimental_data(cfg, aux, columns)
+        target_ids, targets, membership, train, kde_sample_seed = sample_experimental_data(cfg, full_aux, columns)
+
+        aux = full_aux if cfg.overlapping_aux else full_aux[~full_aux.index.isin(train.index)]
 
         for sdg, run_fn in sdgs.items():
 
             kde_ma, kde_auc, kde_time, tailored_ma, tailored_auc, tailored_ma_w, tailored_auc_w, tailored_time, arbitrary_ma, distance = run_fn(cfg, meta, aux, columns, train, eps, targets, target_ids, membership, kde_sample_seed)
-            print("MA.....", tailored_ma)
 
             if C.save_results:
                 if kde_ma is not None:
@@ -80,7 +100,7 @@ def attack_experiments(sdgs, cfg):
                 dump_artifact(results, results_filename)
 
             if C.verbose:
-                print(f"SDG: {sdg}, KDE: {kde_ma}, {kde_auc}, arbitrary: {arbitrary_ma}, MAMA-MIA: {tailored_ma}, {tailored_auc}, distance: {distance}")
+                print(f"SDG: {sdg}, KDE: {'{0:.2f}'.format(kde_ma or 0)}, {'{0:.2f}'.format(kde_auc or 0)}, arbitrary: {'{0:.2f}'.format(arbitrary_ma or 0)}, MAMA-MIA: {'{0:.2f}'.format(max([tailored_ma or 0, tailored_auc or 0, tailored_ma_w or 0, tailored_auc_w or 0]))}, distance: {'{0:.2f}'.format(distance or 0)}")
 
 
 
@@ -109,7 +129,7 @@ def kde_get_ma(cfg, aux, synth, targets, target_ids, membership, sample_seed):
         return MA, AUC, end_time - start_time
     except np.linalg.LinAlgError:
         print("Error in calculating KDE.")
-        return None, None
+        return None, None, None
 
 
 ## MAMA-MIA
@@ -144,58 +164,60 @@ def attack_gsd(cfg, meta, aux, columns, train, eps, targets, target_ids, members
         data_size=train.shape[0]
     )
 
-    # try:
-    # LOAD saved synthetic test data
-    # encoded_synth, synth, train, encoded_targets, targets, target_ids, membership, query_ids = load_artifact(f"{cfg.data_name}_{'{0:.2f}'.format(eps)}_GSD_temp_synth_stuff")
+    try:
+        # LOAD saved synthetic test data
+        # encoded_synth, synth, train, encoded_targets, targets, target_ids, membership, query_ids = load_artifact(f"{cfg.data_name}_{'{0:.2f}'.format(eps)}_GSD_temp_synth_stuff")
 
-    # GENERATE and SAVE synthetic test data
-    encoded_synth, query_ids = algo.fit_dp(PRNGKey(seed), stat_module=stat_module, epsilon=eps, delta=delta)
-    encoded_synth = encoded_synth.df
-    synth = decode_data_from_numeric(cfg, encoded_synth, minmax_encode_catg=False)
-    dump_artifact((encoded_synth, synth, train, encoded_targets, targets, target_ids, membership, query_ids),
-                  f"{cfg.data_name}_{'{0:.2f}'.format(eps)}_GSD_temp_synth_stuff")
+        # GENERATE and SAVE synthetic test data
+        encoded_synth, query_ids = algo.fit_dp(PRNGKey(seed), stat_module=stat_module, epsilon=eps, delta=delta)
+        encoded_synth = encoded_synth.df
+        synth = decode_data_from_numeric(cfg, encoded_synth, minmax_encode_catg=False)
+        dump_artifact((encoded_synth, synth, train, encoded_targets, targets, target_ids, membership, query_ids),
+                      f"{cfg.data_name}_{'{0:.2f}'.format(eps)}_GSD_temp_synth_stuff")
 
-    if cfg.data_name == "snake":
-        synth = synth.astype({'age': 'int', 'ownchild': 'int', 'hoursut': 'int'})
-    elif cfg.data_name == "cali":
-        synth = synth.astype(int)
+        if cfg.data_name == "snake":
+            synth = synth.astype({'age': 'int', 'ownchild': 'int', 'hoursut': 'int'})
+        elif cfg.data_name == "cali":
+            synth = synth.astype(int)
 
-    all_possible_queries = marginal_module2.queries
-    kde_ma, kde_auc, kde_time = kde_get_ma(cfg, aux, synth, targets, target_ids, membership, kde_sample_seed)
-    tailored_ma, tailored_auc, tailored_ma_w, tailored_auc_w, arbitrary_ma, tailored_time = run_all_gsd_experiments(cfg, all_possible_queries, encoded_aux, encoded_synth, eps, encoded_targets, target_ids, membership)
-    wd = wasserstein_distance(cfg, train, synth, columns)
+        all_possible_queries = marginal_module2.queries
+        kde_ma, kde_auc, kde_time = kde_get_ma(cfg, aux, synth, targets, target_ids, membership, kde_sample_seed)
+        tailored_ma, tailored_auc, tailored_ma_w, tailored_auc_w, arbitrary_ma, tailored_time = run_all_gsd_experiments(cfg, all_possible_queries, encoded_aux, encoded_synth, eps, encoded_targets, target_ids, membership)
+        wd = wasserstein_distance(cfg, train, synth, columns)
 
-    return kde_ma, kde_auc, kde_time, tailored_ma, tailored_auc, tailored_ma_w, tailored_auc_w, tailored_time, arbitrary_ma, wd
-    # except:
-    #     print("Error in running GSD.")
-    #     return None, None, None, None, None, None
+        return kde_ma, kde_auc, kde_time, tailored_ma, tailored_auc, tailored_ma_w, tailored_auc_w, tailored_time, arbitrary_ma, wd
+    except:
+        print("Error in running GSD.")
+        return None, None, None, None, None, None, None, None, None, None
 
 
 def attack_mst(cfg, meta, aux, columns, train, eps, targets, target_ids, membership, kde_sample_seed):
     mst_gen = mst.MST(dataset=train[columns], metadata=meta, size=cfg.synth_size, epsilon=eps)
-    # try:
-    mst_gen.run()
-    synth = mst_gen.output
+    try:
+        mst_gen.run()
+        synth = mst_gen.output
 
-    if cfg.data_name == "snake":
-        synth = synth.astype({'age': 'int', 'ownchild': 'int', 'hoursut': 'int'})
-    elif cfg.data_name == "cali":
-        synth = synth.astype(int)
+        if cfg.data_name == "snake":
+            synth = synth.astype({'age': 'int', 'ownchild': 'int', 'hoursut': 'int'})
+        elif cfg.data_name == "cali":
+            synth = synth.astype(int)
 
-    kde_ma, kde_auc, kde_time = kde_get_ma(cfg, aux, synth, targets, target_ids, membership, kde_sample_seed)
-    tailored_ma, tailored_auc, arbitrary_ma, tailored_time = run_all_mst_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership)
-    wd = wasserstein_distance(cfg, train, synth, columns)
+        kde_ma, kde_auc, kde_time = kde_get_ma(cfg, aux, synth, targets, target_ids, membership, kde_sample_seed)
+        tailored_ma, tailored_auc, arbitrary_ma, tailored_time = run_all_mst_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership)
+        wd = wasserstein_distance(cfg, train, synth, columns)
 
-    return kde_ma, kde_auc, kde_time, None, None, tailored_ma, tailored_auc, tailored_time, arbitrary_ma, wd
-    # except:
-    #     print("Error in running MST.")
-    #     return None, None, None, None, None, None
+        return kde_ma, kde_auc, kde_time, None, None, tailored_ma, tailored_auc, tailored_time, arbitrary_ma, wd
+    except ValueError:
+        print("Error in running MST.")
+        return None, None, None, None, None, None, None, None, None, None
 
 
 def attack_privbayes(cfg, meta, aux, columns, train, eps, targets, target_ids, membership, kde_sample_seed):
 
     # generate synthetic test data
     privbayes_gen = privbayes.PRIVBAYES(dataset=train[columns], metadata=meta, size=cfg.synth_size, epsilon=eps)
+
+    # try:
     privbayes_gen.run()
     synth = privbayes_gen.output
 
@@ -210,10 +232,14 @@ def attack_privbayes(cfg, meta, aux, columns, train, eps, targets, target_ids, m
     wd = wasserstein_distance(cfg, train, synth, columns)
 
     return kde_ma, kde_auc, kde_time, None, None, tailored_ma, tailored_auc, tailored_time, arbitrary_ma, wd
+    # except:
+    #     print("Error in running PrivBayes.")
+    #     return None, None, None, None, None, None, None, None, None, None
 
 
 def attack_rap(cfg, meta, aux, columns, train, eps, targets, target_ids, membership, kde_sample_seed):
 
+    # try:
     # LOAD saved synthetic test data
     # catg_synth, synth, queries_used, train, targets, target_ids, membership = load_artifact(f"{cfg.data_name}_{'{0:.2f}'.format(eps)}_RAP_temp_synth_stuff")
 
@@ -225,17 +251,20 @@ def attack_rap(cfg, meta, aux, columns, train, eps, targets, target_ids, members
     # conduct experiments
     synth_decoded = decode_rap_synth(cfg, columns, meta, catg_synth)
     kde_ma, kde_auc, kde_time = kde_get_ma(cfg, aux, synth_decoded, targets, target_ids, membership, kde_sample_seed)
-    tailored_ma, tailored_auc, arbitrary_ma, tailored_time = run_all_rap_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership)
+    tailored_ma, tailored_auc, tailored_ma_sparse, tailored_auc_sparse, arbitrary_ma, tailored_time = run_all_rap_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership)
     wd = wasserstein_distance(cfg, train, synth, columns, encode_d2=False)
     wd_2 = wasserstein_distance(cfg, train, synth_decoded, columns)
 
     assert wd_2 == wd, "Error in WD calculation!"
 
     # SANITY CHECKS
-    sanity_ma_verification_queries, sanity_auc, _, _ = run_all_rap_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership, verification_queries=queries_used)
-    print(f"\nReal: {tailored_ma}, Sanity: {sanity_ma_verification_queries}")
+    # sanity_ma_verification_queries, sanity_auc, sanity_tailored_ma_sparse, sanity_tailored_auc_sparse, _, _ = run_all_rap_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership, verification_queries=queries_used)
+    # print(f"\nReal: {tailored_ma}, Sanity: {sanity_ma_verification_queries}")
 
-    return kde_ma, kde_auc, kde_time, None, None, tailored_ma, tailored_auc, tailored_time, arbitrary_ma, wd
+    return kde_ma, kde_auc, kde_time, tailored_ma_sparse, tailored_auc_sparse, tailored_ma, tailored_auc, tailored_time, arbitrary_ma, wd
+    # except:
+    #     print("Error in running RAP.")
+    #     return None, None, None, None, None, None, None, None, None, None
 
 
 
@@ -294,14 +323,15 @@ def run_all_privbayes_experiments(cfg, columns, aux, synth, eps, targets, target
 
 
 def run_all_rap_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership, verification_queries=None):
-    queries_weights = load_artifact(make_FP_filename(cfg, "RAP", eps, specify_epsilon=True)) if verification_queries is None else \
-        {tuple(q.tolist()): cfg.rap_use_FP_threshold for q in verification_queries}
+    fp_filename = make_FP_filename(cfg, "RAP", eps, specify_epsilon=True, try_epsilons=[10, 100, 1000])
+    queries_weights = load_artifact(fp_filename) \
+        if verification_queries is None else {tuple(q.tolist()): cfg.rap_use_FP_threshold for q in verification_queries}
 
     aux_encoded = pd.DataFrame(binarize_discrete_features_evenly(cfg, aux, columns)[0])
     targets_encoded = pd.DataFrame(binarize_discrete_features_evenly(cfg, targets, columns)[0])
 
     start_time = time.process_time()
-    scores, tailored_ma, tailored_auc = custom_rap_attack(cfg, eps, aux_encoded, synth, targets, targets_encoded, target_ids, membership, queries_weights)
+    (scores, tailored_ma, tailored_auc), (scores_w, tailored_ma_sparse, tailored_auc_sparse) = custom_rap_attack(cfg, eps, aux_encoded, synth, targets, targets_encoded, target_ids, membership, queries_weights)
     end_time = time.process_time()
 
     assert (aux_encoded.columns == targets_encoded.columns).all()
@@ -310,11 +340,11 @@ def run_all_rap_experiments(cfg, columns, aux, synth, eps, targets, target_ids, 
     arbitrary_FP_ma = None
     if cfg.check_arbitrary_fps:
         arbitrary_queries = generate_arbitrary_FPs(aux_encoded.columns, cfg.rap_top_q * cfg.rap_epochs, cfg.rap_k, cfg.rap_k)
-        _, arbitrary_FP_ma, _arbitrary_tailored_auc = custom_rap_attack(cfg, eps, aux_encoded, synth, targets, targets_encoded, target_ids, membership, arbitrary_queries)
+        (_, arbitrary_FP_ma, _arbitrary_tailored_auc), (scores_w, tailored_ma_sparse, tailored_auc_sparse) = custom_rap_attack(cfg, eps, aux_encoded, synth, targets, targets_encoded, target_ids, membership, arbitrary_queries)
 
     plot_output(scores)
 
-    return tailored_ma, tailored_auc, arbitrary_FP_ma, end_time - start_time
+    return tailored_ma, tailored_auc, tailored_ma_sparse, tailored_auc_sparse, arbitrary_FP_ma, end_time - start_time
 
 
 
@@ -328,8 +358,8 @@ def custom_gsd_attack(cfg, eps, encoded_aux, encoded_synth, encoded_targets, tar
     num_queries_used = np.array([0] * encoded_targets.shape[0])
     num_queries_used_weighted = np.array([0] * encoded_targets.shape[0])
 
-    # choose highest weight threshold of when to incorporate focal-point based on epsilon
-    threshold = max(fp_weights.values()) * max([t for e, t in cfg.fp_weight_thresholds.items() if eps >= e])
+    threshold = determine_weight_threshold(cfg, eps, fp_weights)
+
     for i, (fp, weight) in enumerate(fp_weights.items()):
         if i % 500 == 0: print(f"I: {i}", end=" ")
         # if i > 200: break
@@ -366,8 +396,8 @@ def custom_mst_attack(cfg, eps, aux, synth, targets, target_ids, membership, mar
     A = np.array([0.0]*targets.shape[0])
     num_queries_used = np.array([0] * targets.shape[0])
 
-    # choose highest weight threshold of when to incorporate focal-point based on epsilon
-    threshold = max(marginals_weights.values()) * max([t for e, t in cfg.fp_weight_thresholds.items() if eps >= e])
+    threshold = determine_weight_threshold(cfg, eps, marginals_weights)
+
     for marginal, weight in marginals_weights.items():
         if weight < threshold: continue
 
@@ -376,7 +406,7 @@ def custom_mst_attack(cfg, eps, aux, synth, targets, target_ids, membership, mar
         D_aux = aux[marginal_list].value_counts(normalize=True)
 
         default_val = 1e-10
-        A += np.array([weight * D_synth.get(tuple(val), default=default_val) / D_aux.get(tuple(val)) for val in targets[marginal_list].values])
+        A += np.array([weight * D_synth.get(tuple(val), default=default_val) / D_aux.get(tuple(val), default=default_val) for val in targets[marginal_list].values])
         num_queries_used += 1
 
     return score_attack(cfg, A, num_queries_used, targets, target_ids, membership)
@@ -386,8 +416,8 @@ def custom_privbayes_attack(cfg, eps, aux, synth, targets, target_ids, membershi
     A = np.array([0.0] * targets.shape[0])
     num_queries_used = np.array([0] * targets.shape[0])
 
-    # choose highest weight threshold of when to incorporate focal-point based on epsilon
-    threshold = max(conditionals_weights.values()) * max([t for e, t in cfg.fp_weight_thresholds.items() if eps >= e])
+    threshold = determine_weight_threshold(cfg, eps, conditionals_weights)
+
     for conditional, weight in conditionals_weights.items():
         if weight < threshold: continue
 
@@ -407,24 +437,31 @@ def custom_privbayes_attack(cfg, eps, aux, synth, targets, target_ids, membershi
         for child_val, *parent_vals in target_vals:
             parent_vals = tuple(parent_vals)
             synth_conditional = D_synth.get(parent_vals or True, default=pd.Series(dtype=np.float64)).get(child_val, default=default_val)
-            # no "get()" default needed for base since target is in base
+            # aux_conditional = max(D_aux.get(parent_vals or True, default=pd.Series(dtype=np.float64)).get(child_val, default=default_val), default_val)
             aux_conditional = D_aux.get(parent_vals or True).get(child_val)
-            ratio_conditionals.append(weight * synth_conditional / aux_conditional)
+            # ratio_conditionals.append(weight * synth_conditional / aux_conditional)
+            ratio_conditionals.append(synth_conditional / aux_conditional)
 
         A += np.array(ratio_conditionals)
         num_queries_used += 1
 
-    return score_attack(cfg, A, num_queries_used, targets, target_ids, membership)
+    scores, MA, AUC = score_attack(cfg, A, num_queries_used, targets, target_ids, membership)
+
+    return scores, MA, AUC
 
 
 def custom_rap_attack(cfg, eps, aux_encoded, synth, targets, targets_encoded, target_ids, membership, fp_weights):
+    # assert False, "Implement custom RAP FP dynamic threshold!"
     A = np.array([0.0]*targets_encoded.shape[0])
+    A_sparse = np.array([0.0]*targets_encoded.shape[0])
     num_queries_used = np.array([0] * targets_encoded.shape[0])
+    num_queries_used_sparse = np.array([0] * targets_encoded.shape[0])
 
     # choose highest weight threshold of when to incorporate focal-point based on epsilon
-    threshold = max(fp_weights.values()) * max([t for e, t in cfg.fp_weight_thresholds.items() if eps >= e])
+    # threshold = max(fp_weights.values()) * max([t for e, t in cfg.fp_weight_thresholds.items() if eps >= e])
     for query, weight in fp_weights.items():
-        if weight < threshold: continue
+        # if weight < threshold: continue
+        if weight < 2: continue
 
         query_columns = list(query)
         D_synth = synth[query_columns].value_counts(normalize=True)
@@ -432,15 +469,16 @@ def custom_rap_attack(cfg, eps, aux_encoded, synth, targets, targets_encoded, ta
 
         default_val = 1e-6
         target_vals = targets_encoded[query_columns].values
-        # A += np.array([weight * D_synth.get(tuple(val), default=default_val) / D_aux.get(tuple(val)) for val in targets_encoded[query_columns].values])
 
         for w, val in enumerate(target_vals):
-            # if val.any():
-            if val.all():
-            # if val.all() or not val.any():
-                A[w] += weight * D_synth.get(tuple(val), default=default_val) / D_aux.get(tuple(val))
-                num_queries_used[w] += weight
+            A[w] += weight * D_synth.get(tuple(val), default=default_val) / D_aux.get(tuple(val))
+            num_queries_used[w] += weight
 
-    return score_attack(cfg, A, num_queries_used, targets, target_ids, membership)
+            # if val.all() or not val.any():
+            if val.all():
+                A_sparse[w] += weight * D_synth.get(tuple(val), default=default_val) / D_aux.get(tuple(val))
+                num_queries_used_sparse[w] += weight
+
+    return score_attack(cfg, A, num_queries_used, targets, target_ids, membership), score_attack(cfg, A_sparse, num_queries_used_sparse, targets, target_ids, membership)
 
 

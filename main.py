@@ -78,18 +78,22 @@ def attack():
         False,
     ]
     sdgs = {
-        # "MST": attack_mst,
-        # "PrivBayes": attack_privbayes,
-        "GSD": attack_gsd,
+        "MST": attack_mst,
+        "PrivBayes": attack_privbayes,
+        # "GSD": attack_gsd,
         # "RAP": attack_rap
     }
     train_sizes = {
-        100: 10,
-        316: 26,
-        1_000: 64,
-        3_162: 160,
+        # 100: 10,
+        # 316: 26,
+        # 1_000: 64,
+        # 3_162: 160,
+        10_000: 400,
+        31_622: 1000,
     }
-    # train_sizes =
+    # train_sizes = Config(None).train_sizes
+
+    # epsilons = [round(10 ** x, 2) for x in np.arange(-1, 3.1)]
 
     for r in tqdm(range(C.n_runs)):
         print(f"\n\n\nRUN {r}")
@@ -103,7 +107,7 @@ def attack():
                         dataset,
                         train_size=t,
                         set_MI=set_MI,
-                        # epsilons=[464.16]
+                        # overlapping_aux=False,
                     ))
 
 
