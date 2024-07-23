@@ -378,8 +378,8 @@ def generate_arbitrary_FPs(columns, num, size_min, size_max):
         FPs[pick] = 1
     return FPs
 
-def save_off_intermediate_FPs(cfg, eps, FPs, sdg):
-    filename = make_FP_filename(cfg, sdg, eps)
+def save_off_intermediate_FPs(cfg, eps, FPs, sdg, filename=None):
+    filename = filename if filename else make_FP_filename(cfg, sdg, eps)
     FP_frequencies = load_artifact(filename) or {}
     for FP in FPs:
         FP_frequencies[FP] = FP_frequencies.get(FP, 0) + 1

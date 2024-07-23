@@ -25,8 +25,48 @@ from collections import Counter
 from util import *
 
 
-def determine_gsd_marginals(cfg, aux, columns, catg_cols, meta, eps):
-    train = aux[columns + ['HHID']].sample(n=C.shadow_train_size)
+
+
+def determine_mst_marginals(cfg, aux, columns, _, meta, eps, n_size, filename=None):
+    cliques = []
+    gen = mst.MST(
+        dataset=aux[columns].sample(n=n_size),
+        metadata=meta,
+        size=n_size,
+        epsilon=eps,
+    )
+    gen.run()
+
+    for FP in gen.cliques:
+        attrs = np.array(FP).tolist()
+        attrs.sort()
+        cliques.append(tuple(attrs))
+    save_off_intermediate_FPs(cfg, eps, cliques, "MST", filename=filename)
+    return cliques
+
+
+
+def determine_privbayes_conditionals(cfg, aux, columns, _, meta, eps, n_size, filename=None):
+    conditionals = []
+    gen = privbayes.PRIVBAYES(
+        dataset=aux[columns].sample(n=n_size),
+        metadata=meta,
+        size=n_size,
+        epsilon=eps,
+    )
+    gen.run()
+
+    for FP in gen.conditionals:
+        attrs = np.array(FP).tolist()
+        child, parents = attrs[0], attrs[1:]
+        parents.sort()
+        conditionals.append(tuple([child]+parents))
+    save_off_intermediate_FPs(cfg, eps, conditionals, "PrivBayes", filename=filename)
+    return conditionals
+
+
+def determine_gsd_marginals(cfg, aux, columns, catg_cols, meta, eps, n_size, filename=None):
+    train = aux[columns + ['HHID']].sample(n=n_size)
 
     GSD_config = {feature_meta['name']: len(feature_meta['representation']) if feature_meta['name'] in catg_cols else 1 \
                   for feature_meta in meta}
@@ -50,54 +90,17 @@ def determine_gsd_marginals(cfg, aux, columns, catg_cols, meta, eps):
                population_size_muta=50,
                population_size_cross=50,
                sparse_statistics=True,
-               data_size=C.shadow_synth_size
+               data_size=n_size
                )
 
     query_ids = algo.fit_dp(PRNGKey(rand.randint(0, 1000)), stat_module=stat_module, epsilon=eps, delta=delta, only_determine_fps=True)
 
     FPs = [tuple([round(float(x), 3) for x in all_possible_queries[query_id]]) for query_id in query_ids]
-    save_off_intermediate_FPs(cfg, eps, FPs, "GSD")
+    save_off_intermediate_FPs(cfg, eps, FPs, "GSD", filename=filename)
+    return FPs
 
 
-
-def determine_mst_marginals(cfg, aux, columns, _, meta, eps):
-    cliques = []
-    gen = mst.MST(
-        dataset=aux[columns].sample(n=C.shadow_train_size),
-        metadata=meta,
-        size=C.shadow_synth_size,
-        epsilon=eps,
-    )
-    gen.run()
-
-    for FP in gen.cliques:
-        attrs = np.array(FP).tolist()
-        attrs.sort()
-        cliques.append(tuple(attrs))
-    save_off_intermediate_FPs(cfg, eps, cliques, "MST")
-
-
-
-def determine_privbayes_conditionals(cfg, aux, columns, _, meta, eps):
-    conditionals = []
-    gen = privbayes.PRIVBAYES(
-        dataset=aux[columns].sample(n=C.shadow_train_size),
-        metadata=meta,
-        size=C.shadow_synth_size,
-        epsilon=eps,
-    )
-    gen.run()
-
-    for FP in gen.conditionals:
-        attrs = np.array(FP).tolist()
-        child, parents = attrs[0], attrs[1:]
-        parents.sort()
-        conditionals.append(tuple([child]+parents))
-    save_off_intermediate_FPs(cfg, eps, conditionals, "PrivBayes")
-
-
-
-def determine_rap_queries(cfg, aux, columns, _, meta, eps):
+def determine_rap_queries(cfg, aux, columns, _, meta, eps, n_size, filename=None):
 
     ### This code is copy-pasted from the Relaxed-Adaptive-Projection Library, with unused
     ### segments removed, and constants added that are used by authors (Aydore et al., 2021)
@@ -109,7 +112,7 @@ def determine_rap_queries(cfg, aux, columns, _, meta, eps):
 
     key = random.PRNGKey(seed)
     # sample rows from auxiliary data
-    D = aux_encoded[np.random.choice(aux.shape[0], C.shadow_train_size)]
+    D = aux_encoded[np.random.choice(aux.shape[0], n_size)]
     n, d = D.shape
     delta = 1 / n ** 2
 
@@ -179,5 +182,6 @@ def determine_rap_queries(cfg, aux, columns, _, meta, eps):
         attrs = np.array(FP).tolist()
         attrs.sort()
         queries_sorted.append(tuple(attrs))
-    save_off_intermediate_FPs(cfg, eps, queries_sorted, "RAP")
+    save_off_intermediate_FPs(cfg, eps, queries_sorted, "RAP", filename=filename)
+    return queries_sorted
 
