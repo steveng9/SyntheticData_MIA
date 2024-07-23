@@ -11,16 +11,14 @@ warnings.filterwarnings("ignore")
 sys.path.append('reprosyn-main/src/reprosyn/methods/mbi/')
 # import disjoint_set
 
-#import mst
-#import privbayes
+import mst
+import privbayes
 
 sys.path.append('private_gsd/')
 # from utils.utils_data import Dataset, Domain
 # from stats import Marginals, ChainedStatistics
 # from models import GSD
 # from jax.random import PRNGKey
-
-
 # from collections import Counter
 
 from util import *
@@ -72,11 +70,11 @@ def attack():
 
     datasets = [
         "snake",
-        # "cali",
+        "cali",
     ]
     set_MIs = [
         True,
-        # False,
+        False,
     ]
     sdgs = {
         "MST": attack_mst,
@@ -85,15 +83,16 @@ def attack():
         # "RAP": attack_rap
     }
     train_sizes = {
-        100: 10,
+        # 100: 10,
         # 316: 26,
         # 1_000: 64,
         # 3_162: 160,
+        10_000: 400,
+        31_622: 1000,
     }
     # train_sizes = Config(None).train_sizes
 
-    # epsilons = list(reversed([round(10 ** x, 2) for x in np.arange(-1, 3.1)]))
-    epsilons = [46.42]
+    # epsilons = [round(10 ** x, 2) for x in np.arange(-1, 3.1)]
 
     for r in tqdm(range(C.n_runs)):
         print(f"\n\n\nRUN {r}")
@@ -107,7 +106,7 @@ def attack():
                         dataset,
                         train_size=t,
                         set_MI=set_MI,
-                        epsilons=epsilons
+                        # overlapping_aux=False,
                     ))
 
 

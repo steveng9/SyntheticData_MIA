@@ -175,7 +175,7 @@ expB = SimpleNamespace(
     s=500,
     r=30,
     eps=10,
-    exclude={"gsd": [100, 316, 1_000, 3_162, 31_623], "mst": n_sizes, "priv": n_sizes}
+    exclude={"gsd": [31_623]}
 )
 
 expC = SimpleNamespace(
@@ -412,16 +412,16 @@ def assign_experiment_C(aux):
                   directory + label_matrix_filename + f"_singleMI")
     dump_artifact(create_label_matrix(expC.r, expC.s, set_MI_targets), directory + label_matrix_filename + f"_setMI")
 
-
-def gen_matrix_1(r, s, t):
-    assert False, "not yet implemented"
-    assert not t % 2 and not s % 2
-    print("config 1: each shadowset has half of the targets")
-    label_list = [np.sort(rng.choice(s, size=s // 2, replace=False)) for _ in range(t)]
-    label_matrix = np.zeros((t, s), dtype=bool)
-    for i in range(t):
-        label_matrix[i][label_list[i]] = True
-    label_matrix_T = np.swapaxes(label_matrix, 0, 1)
+#
+# def gen_matrix_1(r, s, t):
+#     assert False, "not yet implemented"
+#     assert not t % 2 and not s % 2
+#     print("config 1: each shadowset has half of the targets")
+#     label_list = [np.sort(rng.choice(s, size=s // 2, replace=False)) for _ in range(t)]
+#     label_matrix = np.zeros((t, s), dtype=bool)
+#     for i in range(t):
+#         label_matrix[i][label_list[i]] = True
+#     label_matrix_T = np.swapaxes(label_matrix, 0, 1)
 
 
 def gen_matrix_2(r, s, targets):
@@ -436,13 +436,13 @@ def gen_matrix_2(r, s, targets):
 
     return pd.DataFrame(label_matrix_T, columns=targets)
 
-
-def gen_matrix_3(r, s, targets):
-    assert False, "not yet implemented"
-    assert not t % 2 and not s % 2
-    print("config 3: each shadowset has a random number of targets (TAPAS)")
-    label_matrix_T = [np.random.randint(2, size=t) == 1 for _ in range(s)]
-    label_matrix = np.swapaxes(label_matrix_T, 0, 1)
+#
+# def gen_matrix_3(r, s, targets):
+#     assert False, "not yet implemented"
+#     assert not t % 2 and not s % 2
+#     print("config 3: each shadowset has a random number of targets (TAPAS)")
+#     label_matrix_T = [np.random.randint(2, size=t) == 1 for _ in range(s)]
+#     label_matrix = np.swapaxes(label_matrix_T, 0, 1)
 
 
 def gen_experiment_A(aux, meta, cfg):

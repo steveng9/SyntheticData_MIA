@@ -36,7 +36,6 @@ from jax import numpy as jnp, random
 
 
 
-
 # Experimental Configuration
 class Config:
     def __init__(
@@ -46,13 +45,15 @@ class Config:
             train_sizes={100: 10, 316: 26, 1_000: 64, 3162: 160, 10_000: 400, 31_622: 1000},
             train_size=1_000,
             set_MI=False,
-            household_min_size=4,
+            household_min_size=5,
             # epsilons=list(reversed([round(10 ** x, 2) for x in np.arange(-1, 3.1, 1 / 3)])),
             epsilons=[round(10 ** x, 2) for x in np.arange(-1, 3.1, 1 / 3)],
             check_arbitrary_fps=False,
 
             # weight threshold (values) is based epsilon (keys)
-            fp_weight_thresholds={.01: .1, 1: .25, 10: .4, 100: .55, 1000: .85},
+            fp_weight_thresholds={.01: .5, 1: .6, 10: .7, 100: .8, 1000: .85},
+
+            overlapping_aux=True,
 
             # RAP parameters
             rap_k=3,
@@ -82,6 +83,7 @@ class Config:
         self.epsilons = epsilons
         self.check_arbitrary_fps = check_arbitrary_fps
         self.fp_weight_thresholds = fp_weight_thresholds
+        self.overlapping_aux = overlapping_aux
         self.rap_k = rap_k
         self.rap_epochs = rap_epochs
         self.rap_top_q = rap_top_q
@@ -95,29 +97,37 @@ class Config:
         self.gsd_bins = gsd_bins
         self.gsd_generations = gsd_generations
 
-    def get_filename(self, task, use_RAP_config=False):
+    def get_filename(self, task, use_RAP_config=False, overlap=True):
         MI_type = 'set' if self.set_MI else 'single'
         filename = f"{task}3_results_{self.data_name}_{C.n_bins}_{MI_type}MI_{self.train_size}"
         if use_RAP_config:
             filename += f"_RAP_{self.rap_top_q}_{self.rap_k}_{self.rap_epochs}_{self.num_kways}_{self.use_subset_of_kways}"
+        if not overlap:
+            filename += "_nonoverlap"
         return filename
 
 
 
 
+############################################______________________________________________
+############################################______________________________________________
+############################################______________________________________________
 
-############################################______________________________________________
-############################################______________________________________________
-############################################______________________________________________
+
+def determine_weight_threshold(cfg, eps, fp_weights):
+    # choose highest weight threshold of when to incorporate focal-point based on epsilon
+    return max(fp_weights.values()) * max([t for e, t in cfg.fp_weight_thresholds.items() if eps >= e])
+
 
 def make_FP_filename(cfg, sdg, eps, specify_epsilon=True, try_epsilons=C.shadow_epsilons):
     eps = min([e for e in try_epsilons if eps <= e])
 
-    filename = f"FP3_{cfg.data_name}_{sdg}_{'{0:.2f}'.format(eps)}_{C.n_bins}_False"
+    # filename = f"FP2_{cfg.data_name}_{sdg}_{'{0:.2f}'.format(eps)}_{C.n_bins}_False"
+    filename = f"FP2_{cfg.data_name}_{sdg}_{'{0:.2f}'.format(eps)}_10_False"
     if not specify_epsilon:
         filename = f"FP2_{cfg.data_name}_{sdg}_100000.00_{C.n_bins}_False"
     if sdg == "RAP":
-        filename += f"_50_3_10_2000"
+        filename += f"_50_{cfg.rap_k}_10_2000"
         # filename += f"_{cfg.rap_top_q}_{cfg.rap_k}_{cfg.rap_epochs}_{cfg.rap_iterations}"
         # filename = "FP_snake_RAP_100000.00_10_3_True_70_3_10_64_False"
     if sdg == "GSD":
@@ -255,6 +265,7 @@ def get_rap_synth(cfg, columns, train_encoded, eps, columns_domain):
     epochs = min(cfg.rap_epochs, jnp.ceil(len(true_statistics) / cfg.rap_top_q).astype(jnp.int32)) \
         if not cfg.rap_all_queries else 1
 
+
     if cfg.rap_all_queries:
         # ensure consistency w/ top_q for one-shot case (is this correct?)
         cfg.rap_top_q = len(true_statistics)
@@ -365,8 +376,8 @@ def generate_arbitrary_FPs(columns, num, size_min, size_max):
         FPs[pick] = 1
     return FPs
 
-def save_off_intermediate_FPs(cfg, eps, FPs, sdg):
-    filename = make_FP_filename(cfg, sdg, eps)
+def save_off_intermediate_FPs(cfg, eps, FPs, sdg, filename=None):
+    filename = filename if filename else make_FP_filename(cfg, sdg, eps)
     FP_frequencies = load_artifact(filename) or {}
     for FP in FPs:
         FP_frequencies[FP] = FP_frequencies.get(FP, 0) + 1
@@ -397,6 +408,4 @@ def score_attack(cfg, A, num_queries_used, targets, target_ids, membership, acti
     AUC = area_under_curve(membership, activated_scores)
 
     return predictions, MA, AUC
-
-
 
