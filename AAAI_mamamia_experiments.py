@@ -39,8 +39,8 @@ import psutil
 
 min_HH_size = 5
 
-DIR = "/Users/golobs/Documents/GradSchool/"
-# DIR = "/home/azureuser/"
+# DIR = "/Users/golobs/Documents/GradSchool/"
+DIR = "/home/golobs/"
 
 FPs_directory = DIR + "focalpoints/"
 # FPs_directory = "/datadrive/focalpoints/"
@@ -62,7 +62,6 @@ sdgs = ["mst", "priv", "gsd", "rap"]
 
 # experiment parameters
 expA = SimpleNamespace(
-    s=50,
     r=30,
     n=10_000,
     t=100,
@@ -70,7 +69,6 @@ expA = SimpleNamespace(
 )
 
 expB = SimpleNamespace(
-    s=50,
     r=30,
     eps=10,
     exclude={"gsd": [31_623]}
@@ -78,7 +76,6 @@ expB = SimpleNamespace(
 
 
 expD = SimpleNamespace(
-    s=50,
     r=30,
     n=1000,
     exclude={}
@@ -175,8 +172,20 @@ def shadow_model_experiment_D(sdg, sdg_method, param):
 
     cali_cfg = Config("cali")
     snake_cfg = Config("snake")
-    _, cali_aux, cali_columns, cali_meta, _ = get_data(cali_cfg) 
+    _, cali_aux, cali_columns, cali_meta, _ = get_data(cali_cfg)
     _, snake_aux, snake_columns, snake_meta, _ = get_data(snake_cfg)
+
+    eps = float(param)
+
+    filename = fp_filename(sdg, expB.eps, n_size, "snake")
+    for _ in tqdm(range(n_FP_shadowruns)):
+        fps = sdg_method(cali_cfg, cali_aux, cali_columns, cali_cfg.categorical_columns, cali_meta, eps, expD.n, filename)
+    for _ in tqdm(range(n_FP_shadowruns)):
+        fps = sdg_method(snake_cfg, snake_aux, snake_columns, snake_cfg.categorical_columns, snake_meta, eps, expD.n, filename)
+
+    print(f"completed FP modelling for experiment D, e{eps}, n{expD.n}")
+    with open(FP_completed_file, "a") as f:
+        f.writelines(f"{sdg}, {fo(expB.eps)}, {n_size}, snake\n")
 
 
 
