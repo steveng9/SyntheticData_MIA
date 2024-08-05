@@ -316,7 +316,7 @@ def print_attack_status():
     print("\nexperiment A")
     for sdg in sdgs:
         for eps in epsilons:
-            if f"{sdg}, {fo(eps)}, {expA.n}, snake\n" not in FPs_completed and eps not in expA.exclude.get(sdg, []):
+            if f"{sdg}, {fo(eps)}, {expA.n}, snake, True, False\n" not in attack_completed_file and eps not in expA.exclude.get(sdg, []):
                 print(f"\t{sdg}, e{fo(eps)}, n{expA.n}, snake", end="...")
                 progress = max([len(l) for l in (load_artifact(attack_results_filename(sdg, eps, expA.n, "snake", True, False)) or {".": []}).values()])
                 print(f"{progress} / {C.n_runs}")
@@ -326,7 +326,7 @@ def print_attack_status():
     print("\nexperiment B")
     for sdg in sdgs:
         for n in n_sizes:
-            if f"{sdg}, {fo(expB.eps)}, {n}, snake\n" not in FPs_completed and n not in expB.exclude.get(sdg, []):
+            if f"{sdg}, {fo(expB.eps)}, {n}, snake, True, False\n" not in attack_completed_file and n not in expB.exclude.get(sdg, []):
                 print(f"\t{sdg}, e{fo(expB.eps)}, n{n}, snake", end="...")
                 progress = max([len(l) for l in (load_artifact(attack_results_filename(sdg, expB.eps, n, "snake", True, False)) or {".": []}).values()])
                 print(f"{progress} / {C.n_runs}")
@@ -337,7 +337,7 @@ def print_attack_status():
     for sdg in sdgs:
         for eps in epsilons:
             for data in ["snake", "cali"]:
-                if f"{sdg}, {fo(eps)}, {expD.n}, {data}\n" not in FPs_completed and eps not in expD.exclude.get(sdg, []):
+                if f"{sdg}, {fo(eps)}, {expD.n}, {data}, True, False\n" not in attack_completed_file and eps not in expD.exclude.get(sdg, []):
                     print(f"\t{sdg}, e{fo(eps)}, n{expD.n}, {data}", end="...")
                     progress = max([len(l) for l in (load_artifact(attack_results_filename(sdg, eps, expD.n, data, True, False)) or {".": []}).values()])
                     print(f"{progress} / {C.n_runs}")
@@ -349,7 +349,7 @@ def print_attack_status():
     for sdg in sdgs:
         for eps in epsilons:
             for data in ["snake", "cali"]:
-                if f"{sdg}, {fo(eps)}, {expD.n}, {data}\n" not in FPs_completed and eps not in expD.exclude.get(sdg, []):
+                if f"{sdg}, {fo(eps)}, {expD.n}, {data}, False, False\n" not in attack_completed_file and eps not in expD.exclude.get(sdg, []):
                     print(f"\t{sdg}, e{fo(eps)}, n{expD.n}, {data}", end="...")
                     progress = max([len(l) for l in (load_artifact(attack_results_filename(sdg, eps, expD.n, data, False, False)) or {".": []}).values()])
                     print(f"{progress} / {C.n_runs}")
@@ -361,7 +361,7 @@ def print_attack_status():
     for sdg in sdgs:
         for eps in epsilons:
             for data in ["snake", "cali"]:
-                if f"{sdg}, {fo(eps)}, {expD.n}, {data}\n" not in FPs_completed and eps not in expD.exclude.get(sdg, []):
+                if f"{sdg}, {fo(eps)}, {expD.n}, {data}, True, True\n" not in attack_completed_file and eps not in expD.exclude.get(sdg, []):
                     print(f"\t{sdg}, e{fo(eps)}, n{expD.n}, {data}", end="...")
                     progress = max([len(l) for l in (load_artifact(attack_results_filename(sdg, eps, expD.n, data, True, True)) or {".": []}).values()])
                     print(f"{progress} / {C.n_runs}")
