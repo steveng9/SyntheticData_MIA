@@ -133,7 +133,7 @@ def shadow_model():
 
 
 def fp_filename(sdg, epsilon, n, data):
-    return f"FP4_{sdg}_e{fo(epsilon)}_n{n}_{data}"
+    return f"focalpoints/FP4_{sdg}_e{fo(epsilon)}_n{n}_{data}"
 
 
 def shadow_model_experiment_A(sdg, sdg_method, param):
@@ -142,12 +142,20 @@ def shadow_model_experiment_A(sdg, sdg_method, param):
     epsilon = float(param)
 
     filename = fp_filename(sdg, epsilon, expA.n, "snake")
+    runtime_filename = filename + "_runtime"
+    runtime = {"time": 0, "num_sets": 0}
+
     for _ in tqdm(range(n_FP_shadowruns)):
+        start = time.process_time()
         fps = sdg_method(cfg, aux, columns, cfg.categorical_columns, meta, epsilon, expA.n, filename)
+        end = time.process_time()
+        runtime["time"] += (end - start)
+        runtime["num_sets"] += 1
 
     print(f"completed FP modelling for experiment A, e{epsilon}, n{expA.n}")
     with open(FP_completed_file, "a") as f:
         f.writelines(f"{sdg}, {fo(epsilon)}, {expA.n}, snake\n")
+    dump_artifact(runtime, runtime_filename)
 
 
 
@@ -157,35 +165,59 @@ def shadow_model_experiment_B(sdg, sdg_method, param):
     n_size = int(param)
 
     filename = fp_filename(sdg, expB.eps, n_size, "snake")
+    runtime_filename = filename + "_runtime"
+    runtime = {"time": 0, "num_sets": 0}
+
     for _ in tqdm(range(n_FP_shadowruns)):
+        start = time.process_time()
         fps = sdg_method(cfg, aux, columns, cfg.categorical_columns, meta, expB.eps, n_size, filename)
+        end = time.process_time()
+        runtime["time"] += (end - start)
+        runtime["num_sets"] += 1
 
     print(f"completed FP modelling for experiment B, e{expB.eps}, n{n_size}")
     with open(FP_completed_file, "a") as f:
         f.writelines(f"{sdg}, {fo(expB.eps)}, {n_size}, snake\n")
+    dump_artifact(runtime, runtime_filename)
 
 
 
 
 def shadow_model_experiment_D(sdg, sdg_method, param):
-    assert False, "Not yet implemented!"
 
-    cali_cfg = Config("cali")
     snake_cfg = Config("snake")
-    _, cali_aux, cali_columns, cali_meta, _ = get_data(cali_cfg)
+    cali_cfg = Config("cali")
     _, snake_aux, snake_columns, snake_meta, _ = get_data(snake_cfg)
+    _, cali_aux, cali_columns, cali_meta, _ = get_data(cali_cfg)
 
     eps = float(param)
 
-    filename = fp_filename(sdg, expB.eps, n_size, "snake")
+    filename_snake = fp_filename(sdg, eps, expD.n, "snake")
+    filename_cali = fp_filename(sdg, eps, expD.n, "cali")
+    runtime_filename_snake = filename_snake + "_runtime"
+    runtime_filename_cali = filename_cali + "_runtime"
+    runtime_snake = {"time": 0, "num_sets": 0}
+    runtime_cali = {"time": 0, "num_sets": 0}
+
     for _ in tqdm(range(n_FP_shadowruns)):
-        fps = sdg_method(cali_cfg, cali_aux, cali_columns, cali_cfg.categorical_columns, cali_meta, eps, expD.n, filename)
+        start = time.process_time()
+        fps = sdg_method(snake_cfg, snake_aux, snake_columns, snake_cfg.categorical_columns, snake_meta, eps, expD.n, filename_snake)
+        end = time.process_time()
+        runtime_snake["time"] += (end - start)
+        runtime_snake["num_sets"] += 1
     for _ in tqdm(range(n_FP_shadowruns)):
-        fps = sdg_method(snake_cfg, snake_aux, snake_columns, snake_cfg.categorical_columns, snake_meta, eps, expD.n, filename)
+        start = time.process_time()
+        fps = sdg_method(cali_cfg, cali_aux, cali_columns, cali_cfg.categorical_columns, cali_meta, eps, expD.n, filename_cali)
+        end = time.process_time()
+        runtime_cali["time"] += (end - start)
+        runtime_cali["num_sets"] += 1
 
     print(f"completed FP modelling for experiment D, e{eps}, n{expD.n}")
     with open(FP_completed_file, "a") as f:
-        f.writelines(f"{sdg}, {fo(expB.eps)}, {n_size}, snake\n")
+        f.writelines(f"{sdg}, {fo(eps)}, {expD.n}, snake\n")
+        f.writelines(f"{sdg}, {fo(eps)}, {expD.n}, cali\n")
+    dump_artifact(runtime_snake, runtime_filename_snake)
+    dump_artifact(runtime_cali, runtime_filename_cali)
 
 
 
