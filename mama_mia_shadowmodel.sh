@@ -45,33 +45,33 @@ nohup python3 AAAI_mamamia_experiments.py shadowmodel A gsd 1000.00 > outfiles/A
 
 #experiment B
 
-nohup python3 AAAI_mamamia_experiments.py shadowmodel B mst 100 > outfiles/A_100.txt &
-nohup python3 AAAI_mamamia_experiments.py shadowmodel B mst 316 > outfiles/A_316.txt &
-nohup python3 AAAI_mamamia_experiments.py shadowmodel B mst 1000 > outfiles/A_1000.txt &
-nohup python3 AAAI_mamamia_experiments.py shadowmodel B mst 3162 > outfiles/A_3162.txt &
-#nohup python3 AAAI_mamamia_experiments.py shadowmodel B mst 10000 > outfiles/A_10000.txt &
-nohup python3 AAAI_mamamia_experiments.py shadowmodel B mst 31623 > outfiles/A_31623.txt &
+nohup python3 AAAI_mamamia_experiments.py shadowmodel B mst 100 > outfiles/B_100.txt &
+nohup python3 AAAI_mamamia_experiments.py shadowmodel B mst 316 > outfiles/B_316.txt &
+nohup python3 AAAI_mamamia_experiments.py shadowmodel B mst 1000 > outfiles/B_1000.txt &
+nohup python3 AAAI_mamamia_experiments.py shadowmodel B mst 3162 > outfiles/B_3162.txt &
+#nohup python3 AAAI_mamamia_experiments.py shadowmodel B mst 10000 > outfiles/B_10000.txt &
+nohup python3 AAAI_mamamia_experiments.py shadowmodel B mst 31623 > outfiles/B_31623.txt &
 
-nohup python3 AAAI_mamamia_experiments.py shadowmodel B priv 100 > outfiles/A_priv_100.txt &
-nohup python3 AAAI_mamamia_experiments.py shadowmodel B priv 316 > outfiles/A_priv_316.txt &
-nohup python3 AAAI_mamamia_experiments.py shadowmodel B priv 1000 > outfiles/A_priv_1000.txt &
-nohup python3 AAAI_mamamia_experiments.py shadowmodel B priv 3162 > outfiles/A_priv_3162.txt &
-#nohup python3 AAAI_mamamia_experiments.py shadowmodel B priv 10000 > outfiles/A_priv_10000.txt &
-nohup python3 AAAI_mamamia_experiments.py shadowmodel B priv 31623 > outfiles/A_priv_31623.txt &
+nohup python3 AAAI_mamamia_experiments.py shadowmodel B priv 100 > outfiles/B_priv_100.txt &
+nohup python3 AAAI_mamamia_experiments.py shadowmodel B priv 316 > outfiles/B_priv_316.txt &
+nohup python3 AAAI_mamamia_experiments.py shadowmodel B priv 1000 > outfiles/B_priv_1000.txt &
+nohup python3 AAAI_mamamia_experiments.py shadowmodel B priv 3162 > outfiles/B_priv_3162.txt &
+#nohup python3 AAAI_mamamia_experiments.py shadowmodel B priv 10000 > outfiles/B_priv_10000.txt &
+nohup python3 AAAI_mamamia_experiments.py shadowmodel B priv 31623 > outfiles/B_priv_31623.txt &
 
-nohup python3 AAAI_mamamia_experiments.py shadowmodel B gsd 100 > outfiles/A_gsd_100.txt &
-nohup python3 AAAI_mamamia_experiments.py shadowmodel B gsd 316 > outfiles/A_gsd_316.txt &
-nohup python3 AAAI_mamamia_experiments.py shadowmodel B gsd 1000 > outfiles/A_gsd_1000.txt &
-nohup python3 AAAI_mamamia_experiments.py shadowmodel B gsd 3162 > outfiles/A_gsd_3162.txt &
-#nohup python3 AAAI_mamamia_experiments.py shadowmodel B gsd 10000 > outfiles/A_gsd_10000.txt &
-#nohup python3 AAAI_mamamia_experiments.py shadowmodel B gsd 31623 > outfiles/A_gsd_31623.txt &
+nohup python3 AAAI_mamamia_experiments.py shadowmodel B gsd 100 > outfiles/B_gsd_100.txt &
+nohup python3 AAAI_mamamia_experiments.py shadowmodel B gsd 316 > outfiles/B_gsd_316.txt &
+nohup python3 AAAI_mamamia_experiments.py shadowmodel B gsd 1000 > outfiles/B_gsd_1000.txt &
+nohup python3 AAAI_mamamia_experiments.py shadowmodel B gsd 3162 > outfiles/B_gsd_3162.txt &
+#nohup python3 AAAI_mamamia_experiments.py shadowmodel B gsd 10000 > outfiles/B_gsd_10000.txt &
+#nohup python3 AAAI_mamamia_experiments.py shadowmodel B gsd 31623 > outfiles/B_gsd_31623.txt &
 
-#nohup python3 AAAI_mamamia_experiments.py shadowmodel B rap 100 > outfiles/A_rap_100.txt &
-#nohup python3 AAAI_mamamia_experiments.py shadowmodel B rap 316 > outfiles/A_rap_316.txt &
-#nohup python3 AAAI_mamamia_experiments.py shadowmodel B rap 1000 > outfiles/A_rap_1000.txt &
-#nohup python3 AAAI_mamamia_experiments.py shadowmodel B rap 3162 > outfiles/A_rap_3162.txt &
-#nohup python3 AAAI_mamamia_experiments.py shadowmodel B rap 10000 > outfiles/A_rap_10000.txt &
-#nohup python3 AAAI_mamamia_experiments.py shadowmodel B rap 31623 > outfiles/A_rap_31623.txt &
+#nohup python3 AAAI_mamamia_experiments.py shadowmodel B rap 100 > outfiles/B_rap_100.txt &
+#nohup python3 AAAI_mamamia_experiments.py shadowmodel B rap 316 > outfiles/B_rap_316.txt &
+#nohup python3 AAAI_mamamia_experiments.py shadowmodel B rap 1000 > outfiles/B_rap_1000.txt &
+#nohup python3 AAAI_mamamia_experiments.py shadowmodel B rap 3162 > outfiles/B_rap_3162.txt &
+#nohup python3 AAAI_mamamia_experiments.py shadowmodel B rap 10000 > outfiles/B_rap_10000.txt &
+#nohup python3 AAAI_mamamia_experiments.py shadowmodel B rap 31623 > outfiles/B_rap_31623.txt &
 
 
 #experiment D

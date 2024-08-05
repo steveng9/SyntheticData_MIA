@@ -202,7 +202,7 @@ def attack_gsd(cfg, meta, aux, columns, train, eps, targets, target_ids, members
 
     algo = GSD(
         domain=data.domain,
-        print_progress=True,
+        print_progress=False,
         stop_early=True,
         num_generations=cfg.gsd_generations,
         population_size_muta=50,

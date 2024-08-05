@@ -94,6 +94,8 @@ def main():
         mama_mia()
     elif task == "status":
         print_status()
+    elif task == "attack_status":
+        print_attack_status()
     elif task == "mkdirs":
         make_directory_structure()
     else:
@@ -304,10 +306,74 @@ def print_status():
         print()
 
 
+
+def print_attack_status():
+    FPs_completed = open(FP_completed_file, "r").readlines()
+
+    print("\nexperiment A")
+    for sdg in sdgs:
+        for eps in epsilons:
+            if f"{sdg}, {fo(eps)}, {expA.n}, snake\n" not in FPs_completed and eps not in expA.exclude.get(sdg, []):
+                print(f"\t{sdg}, e{fo(eps)}, n{expA.n}, snake", end="...")
+                progress = max([len(l) for l in (load_artifact(attack_results_filename(sdg, eps, expA.n, "snake", True, False)) or {".": []}).values()])
+                print(f"{progress} / {C.n_runs}")
+        print()
+
+
+    print("\nexperiment B")
+    for sdg in sdgs:
+        for n in n_sizes:
+            if f"{sdg}, {fo(expB.eps)}, {n}, snake\n" not in FPs_completed and n not in expB.exclude.get(sdg, []):
+                print(f"\t{sdg}, e{fo(expB.eps)}, n{n}, snake", end="...")
+                progress = max([len(l) for l in (load_artifact(attack_results_filename(sdg, expB.eps, n, "snake", True, False)) or {".": []}).values()])
+                print(f"{progress} / {C.n_runs}")
+        print()
+
+
+    print("\nexperiment D")
+    for sdg in sdgs:
+        for eps in epsilons:
+            for data in ["snake", "cali"]:
+                if f"{sdg}, {fo(eps)}, {expD.n}, {data}\n" not in FPs_completed and eps not in expD.exclude.get(sdg, []):
+                    print(f"\t{sdg}, e{fo(eps)}, n{expD.n}, {data}", end="...")
+                    progress = max([len(l) for l in (load_artifact(attack_results_filename(sdg, eps, expD.n, data, True, False)) or {".": []}).values()])
+                    print(f"{progress} / {C.n_runs}")
+                    # print("NOT LAUNCHED")
+        print()
+
+
+    print("\nnon-overlapping")
+    for sdg in sdgs:
+        for eps in epsilons:
+            for data in ["snake", "cali"]:
+                if f"{sdg}, {fo(eps)}, {expD.n}, {data}\n" not in FPs_completed and eps not in expD.exclude.get(sdg, []):
+                    print(f"\t{sdg}, e{fo(eps)}, n{expD.n}, {data}", end="...")
+                    progress = max([len(l) for l in (load_artifact(attack_results_filename(sdg, eps, expD.n, data, False, False)) or {".": []}).values()])
+                    print(f"{progress} / {C.n_runs}")
+                    # print("NOT LAUNCHED")
+        print()
+
+
+    print("\nset MI")
+    for sdg in sdgs:
+        for eps in epsilons:
+            for data in ["snake", "cali"]:
+                if f"{sdg}, {fo(eps)}, {expD.n}, {data}\n" not in FPs_completed and eps not in expD.exclude.get(sdg, []):
+                    print(f"\t{sdg}, e{fo(eps)}, n{expD.n}, {data}", end="...")
+                    progress = max([len(l) for l in (load_artifact(attack_results_filename(sdg, eps, expD.n, data, True, True)) or {".": []}).values()])
+                    print(f"{progress} / {C.n_runs}")
+                    # print("NOT LAUNCHED")
+        print()
+
+
+
+
+
+
 def attack_experiment_A(sdg, sdg_method):
     epsilon = float(sys.argv[4])
-    overlap = bool(sys.argv[5])
-    set_MI = bool(sys.argv[6])
+    overlap = sys.argv[5] == "True"
+    set_MI = sys.argv[6] == "True"
     cfg = Config("snake", set_MI=set_MI, train_size=expA.n, overlapping_aux=overlap)
     _, full_aux, columns, meta, _ = get_data(cfg)
 
@@ -330,7 +396,7 @@ def attack_experiment_A(sdg, sdg_method):
 
     fps = load_artifact(fp_filename(sdg, epsilon, expA.n, "snake"))
 
-    for run in range(C.n_runs):
+    for run in tqdm(range(C.n_runs)):
         target_ids, targets, membership, train, kde_sample_seed = sample_experimental_data(cfg, full_aux, columns)
         aux = full_aux if overlap else full_aux[~full_aux.index.isin(train.index)]
 
@@ -366,10 +432,126 @@ def attack_experiment_A(sdg, sdg_method):
 
 
 def attack_experiment_B(sdg, sdg_method):
-    assert False
-    
+    n = int(sys.argv[4])
+    overlap = sys.argv[5] == "True"
+    set_MI = sys.argv[6] == "True"
+    cfg = Config("snake", set_MI=set_MI, train_size=n, overlapping_aux=overlap)
+    _, full_aux, columns, meta, _ = get_data(cfg)
+
+    results_filename = attack_results_filename(sdg, expB.eps, n, "snake", overlap, set_MI)
+    # runtime_filename = results_filename + "_runtime"
+    # runtime = load_artifact(runtime_filename) or {"time": 0, "num_runs": 0}
+
+    results = load_artifact(results_filename) or {
+        "KDE_MA": [],
+        "KDE_AUC": [],
+        "KDE_time": [],
+        "MM_MA": [],
+        "MM_AUC": [],
+        "MM_MA_weighted": [],
+        "MM_AUC_weighted": [],
+        "MM_time": [],
+        "MM_arbitrary_MA": [],
+        "distance": []
+    }
+
+    fps = load_artifact(fp_filename(sdg, expB.eps, n, "snake"))
+
+    for run in tqdm(range(C.n_runs)):
+        target_ids, targets, membership, train, kde_sample_seed = sample_experimental_data(cfg, full_aux, columns)
+        aux = full_aux if overlap else full_aux[~full_aux.index.isin(train.index)]
+
+        # start = time.process_time()
+        kde_ma, kde_auc, kde_time, mm_ma, mm_auc, mm_ma_w, mm_auc_w, mm_time, mm_arbitrary_ma, distance = \
+            sdg_method(cfg, meta, aux, columns, train, expB.eps, targets, target_ids, membership, kde_sample_seed, fps)
+        # end = time.process_time()
+
+        if kde_ma is not None: results["KDE_MA"].append(kde_ma)
+        if kde_auc is not None: results["KDE_AUC"].append(kde_auc)
+        if kde_time is not None: results["KDE_time"].append(kde_time)
+        if mm_ma is not None: results["MM_MA"].append(mm_ma)
+        if mm_auc is not None: results["MM_AUC"].append(mm_auc)
+        if mm_ma_w is not None: results["MM_MA_weighted"].append(mm_ma_w)
+        if mm_auc_w is not None: results["MM_AUC_weighted"].append(mm_auc_w)
+        if mm_time is not None: results["MM_time"].append(mm_time)
+        if distance is not None: results["distance"].append(distance)
+        if mm_arbitrary_ma is not None: results["MM_arbitrary_MA"].append(mm_arbitrary_ma)
+
+        # save off intermediate results
+        dump_artifact(results, results_filename)
+        # runtime["time"] += (end - start)
+        # runtime["num_sets"] += 1
+
+    print(f"completed MAMA-MIA attack for experiment B, {fo(expB.eps)}, {n}, snake")
+    with open(attack_completed_file, "a") as f:
+        f.writelines(f"{sdg}, {fo(expB.eps)}, {n}, snake, {overlap}, {set_MI}\n")
+    # dump_artifact(runtime, runtime_filename)
+
+
+
+
 def attack_experiment_D(sdg, sdg_method):
-    assert False
+    datasets = ["snake", "cali"]
+    epsilon = float(sys.argv[4])
+    overlap = sys.argv[5] == "True"
+    set_MI = sys.argv[6] == "True"
+    if len(sys.argv) >= 8:
+        datasets = [sys.argv[7]]
+
+
+
+    for data in datasets:
+        cfg = Config(data, set_MI=set_MI, train_size=expD.n, overlapping_aux=overlap)
+        _, full_aux, columns, meta, _ = get_data(cfg)
+
+        results_filename = attack_results_filename(sdg, epsilon, expD.n, data, overlap, set_MI)
+        # runtime_filename = results_filename + "_runtime"
+        # runtime = load_artifact(runtime_filename) or {"time": 0, "num_runs": 0}
+
+        results = load_artifact(results_filename) or {
+            "KDE_MA": [],
+            "KDE_AUC": [],
+            "KDE_time": [],
+            "MM_MA": [],
+            "MM_AUC": [],
+            "MM_MA_weighted": [],
+            "MM_AUC_weighted": [],
+            "MM_time": [],
+            "MM_arbitrary_MA": [],
+            "distance": []
+        }
+
+        fps = load_artifact(fp_filename(sdg, epsilon, expD.n, data))
+
+        for run in tqdm(range(C.n_runs)):
+            target_ids, targets, membership, train, kde_sample_seed = sample_experimental_data(cfg, full_aux, columns)
+            aux = full_aux if overlap else full_aux[~full_aux.index.isin(train.index)]
+
+            # start = time.process_time()
+            kde_ma, kde_auc, kde_time, mm_ma, mm_auc, mm_ma_w, mm_auc_w, mm_time, mm_arbitrary_ma, distance = \
+                sdg_method(cfg, meta, aux, columns, train, epsilon, targets, target_ids, membership, kde_sample_seed, fps)
+            # end = time.process_time()
+
+            if kde_ma is not None: results["KDE_MA"].append(kde_ma)
+            if kde_auc is not None: results["KDE_AUC"].append(kde_auc)
+            if kde_time is not None: results["KDE_time"].append(kde_time)
+            if mm_ma is not None: results["MM_MA"].append(mm_ma)
+            if mm_auc is not None: results["MM_AUC"].append(mm_auc)
+            if mm_ma_w is not None: results["MM_MA_weighted"].append(mm_ma_w)
+            if mm_auc_w is not None: results["MM_AUC_weighted"].append(mm_auc_w)
+            if mm_time is not None: results["MM_time"].append(mm_time)
+            if distance is not None: results["distance"].append(distance)
+            if mm_arbitrary_ma is not None: results["MM_arbitrary_MA"].append(mm_arbitrary_ma)
+
+            # save off intermediate results
+            dump_artifact(results, results_filename)
+            # runtime["time"] += (end - start)
+            # runtime["num_sets"] += 1
+
+        print(f"completed MAMA-MIA attack for experiment D, e{epsilon}, n{expD.n}, {data}")
+        with open(attack_completed_file, "a") as f:
+            f.writelines(f"{sdg}, {fo(epsilon)}, {expD.n}, {data}, {overlap}, {set_MI}\n")
+    # dump_artifact(runtime, runtime_filename)
 
 
 
