@@ -136,7 +136,7 @@ def kde_get_ma(cfg, aux, synth, targets, target_ids, membership, sample_seed):
 ##-------------------------
 
 
-def attack_mst(cfg, meta, aux, columns, train, eps, targets, target_ids, membership, kde_sample_seed):
+def attack_mst(cfg, meta, aux, columns, train, eps, targets, target_ids, membership, kde_sample_seed, fps):
     mst_gen = mst.MST(dataset=train[columns], metadata=meta, size=cfg.synth_size, epsilon=eps)
     try:
         mst_gen.run()
@@ -148,7 +148,7 @@ def attack_mst(cfg, meta, aux, columns, train, eps, targets, target_ids, members
             synth = synth.astype(int)
 
         kde_ma, kde_auc, kde_time = kde_get_ma(cfg, aux, synth, targets, target_ids, membership, kde_sample_seed)
-        tailored_ma, tailored_auc, arbitrary_ma, tailored_time = run_all_mst_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership)
+        tailored_ma, tailored_auc, arbitrary_ma, tailored_time = run_all_mst_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership, fps)
         wd = wasserstein_distance(cfg, train, synth, columns)
 
         return kde_ma, kde_auc, kde_time, None, None, tailored_ma, tailored_auc, tailored_time, arbitrary_ma, wd
@@ -157,7 +157,7 @@ def attack_mst(cfg, meta, aux, columns, train, eps, targets, target_ids, members
         return None, None, None, None, None, None, None, None, None, None
 
 
-def attack_privbayes(cfg, meta, aux, columns, train, eps, targets, target_ids, membership, kde_sample_seed):
+def attack_privbayes(cfg, meta, aux, columns, train, eps, targets, target_ids, membership, kde_sample_seed, fps):
 
     # generate synthetic test data
     privbayes_gen = privbayes.PRIVBAYES(dataset=train[columns], metadata=meta, size=cfg.synth_size, epsilon=eps)
@@ -173,7 +173,7 @@ def attack_privbayes(cfg, meta, aux, columns, train, eps, targets, target_ids, m
 
     # conduct experiments
     kde_ma, kde_auc, kde_time = kde_get_ma(cfg, aux, synth, targets, target_ids, membership, kde_sample_seed)
-    tailored_ma, tailored_auc, arbitrary_ma, tailored_time = run_all_privbayes_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership)
+    tailored_ma, tailored_auc, arbitrary_ma, tailored_time = run_all_privbayes_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership, fps)
     wd = wasserstein_distance(cfg, train, synth, columns)
 
     return kde_ma, kde_auc, kde_time, None, None, tailored_ma, tailored_auc, tailored_time, arbitrary_ma, wd
@@ -182,7 +182,7 @@ def attack_privbayes(cfg, meta, aux, columns, train, eps, targets, target_ids, m
     #     return None, None, None, None, None, None, None, None, None, None
 
 
-def attack_gsd(cfg, meta, aux, columns, train, eps, targets, target_ids, membership, kde_sample_seed):
+def attack_gsd(cfg, meta, aux, columns, train, eps, targets, target_ids, membership, kde_sample_seed, fps):
     encoded_aux = encode_data_all_numeric(cfg, aux, minmax_encode_catg=False)
     encoded_train = encode_data_all_numeric(cfg, train, minmax_encode_catg=False)
     encoded_targets = encode_data_all_numeric(cfg, targets, minmax_encode_catg=False)
@@ -229,7 +229,7 @@ def attack_gsd(cfg, meta, aux, columns, train, eps, targets, target_ids, members
 
         all_possible_queries = marginal_module2.queries
         kde_ma, kde_auc, kde_time = kde_get_ma(cfg, aux, synth, targets, target_ids, membership, kde_sample_seed)
-        tailored_ma, tailored_auc, tailored_ma_w, tailored_auc_w, arbitrary_ma, tailored_time = run_all_gsd_experiments(cfg, all_possible_queries, encoded_aux, encoded_synth, eps, encoded_targets, target_ids, membership)
+        tailored_ma, tailored_auc, tailored_ma_w, tailored_auc_w, arbitrary_ma, tailored_time = run_all_gsd_experiments(cfg, all_possible_queries, encoded_aux, encoded_synth, eps, encoded_targets, target_ids, membership, fps)
         wd = wasserstein_distance(cfg, train, synth, columns)
 
         return kde_ma, kde_auc, kde_time, tailored_ma, tailored_auc, tailored_ma_w, tailored_auc_w, tailored_time, arbitrary_ma, wd
@@ -238,7 +238,7 @@ def attack_gsd(cfg, meta, aux, columns, train, eps, targets, target_ids, members
         return None, None, None, None, None, None, None, None, None, None
 
 
-def attack_rap(cfg, meta, aux, columns, train, eps, targets, target_ids, membership, kde_sample_seed):
+def attack_rap(cfg, meta, aux, columns, train, eps, targets, target_ids, membership, kde_sample_seed, fps):
 
     # try:
     # LOAD saved synthetic test data
@@ -252,7 +252,7 @@ def attack_rap(cfg, meta, aux, columns, train, eps, targets, target_ids, members
     # conduct experiments
     synth_decoded = decode_rap_synth(cfg, columns, meta, catg_synth)
     kde_ma, kde_auc, kde_time = kde_get_ma(cfg, aux, synth_decoded, targets, target_ids, membership, kde_sample_seed)
-    tailored_ma, tailored_auc, tailored_ma_sparse, tailored_auc_sparse, arbitrary_ma, tailored_time = run_all_rap_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership)
+    tailored_ma, tailored_auc, tailored_ma_sparse, tailored_auc_sparse, arbitrary_ma, tailored_time = run_all_rap_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership, fps)
     wd = wasserstein_distance(cfg, train, synth, columns, encode_d2=False)
     wd_2 = wasserstein_distance(cfg, train, synth_decoded, columns)
 
@@ -274,8 +274,10 @@ def attack_rap(cfg, meta, aux, columns, train, eps, targets, target_ids, members
 
 
 
-def run_all_mst_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership):
-    marginals_weights = load_artifact(make_FP_filename(cfg, "MST", eps))
+def run_all_mst_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership, fps):
+    # marginals_weights = load_artifact(make_FP_filename(cfg, "MST", eps))
+    marginals_weights = fps
+
     start_time = time.process_time()
     scores, tailored_ma, tailored_auc = custom_mst_attack(cfg, eps, aux, synth, targets, target_ids, membership, marginals_weights)
     end_time = time.process_time()
@@ -289,8 +291,10 @@ def run_all_mst_experiments(cfg, columns, aux, synth, eps, targets, target_ids, 
     return tailored_ma, tailored_auc, arbitrary_FP_ma, end_time - start_time
 
 
-def run_all_privbayes_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership):
-    conditionals_weights = load_artifact(make_FP_filename(cfg, "PrivBayes", eps))
+def run_all_privbayes_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership, fps):
+    # conditionals_weights = load_artifact(make_FP_filename(cfg, "PrivBayes", eps))
+    conditionals_weights = fps
+
     start_time = time.process_time()
     scores, tailored_ma, tailored_auc = custom_privbayes_attack(cfg, eps, aux, synth, targets, target_ids, membership, conditionals_weights)
     end_time = time.process_time()
@@ -307,8 +311,9 @@ def run_all_privbayes_experiments(cfg, columns, aux, synth, eps, targets, target
     return tailored_ma, tailored_auc, arbitrary_FP_ma, end_time - start_time
 
 
-def run_all_gsd_experiments(cfg, all_possible_queries, encoded_aux, encoded_synth, eps, encoded_targets, target_ids, membership):
-    fp_weights = load_artifact(make_FP_filename(cfg, "GSD", eps))
+def run_all_gsd_experiments(cfg, all_possible_queries, encoded_aux, encoded_synth, eps, encoded_targets, target_ids, membership, fps):
+    # fp_weights = load_artifact(make_FP_filename(cfg, "GSD", eps))
+    fp_weights = fps
 
     start_time = time.process_time()
     (scores, tailored_ma, tailored_auc), (scores_w, tailored_ma_w, tailored_auc_w) = custom_gsd_attack(cfg, eps, encoded_aux, encoded_synth, encoded_targets, target_ids, membership, fp_weights)
@@ -324,10 +329,11 @@ def run_all_gsd_experiments(cfg, all_possible_queries, encoded_aux, encoded_synt
     return tailored_ma, tailored_auc, tailored_ma_w, tailored_auc_w, arbitrary_FP_ma, end_time - start_time
 
 
-def run_all_rap_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership, verification_queries=None):
-    fp_filename = make_FP_filename(cfg, "RAP", eps, specify_epsilon=True, try_epsilons=[10, 100, 1000])
-    queries_weights = load_artifact(fp_filename) \
-        if verification_queries is None else {tuple(q.tolist()): cfg.rap_use_FP_threshold for q in verification_queries}
+def run_all_rap_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership, fps, verification_queries=None):
+    # fp_filename = make_FP_filename(cfg, "RAP", eps, specify_epsilon=True, try_epsilons=[10, 100, 1000])
+    # queries_weights = load_artifact(fp_filename) \
+    #     if verification_queries is None else {tuple(q.tolist()): cfg.rap_use_FP_threshold for q in verification_queries}
+    queries_weights = fps
 
     aux_encoded = pd.DataFrame(binarize_discrete_features_evenly(cfg, aux, columns)[0])
     targets_encoded = pd.DataFrame(binarize_discrete_features_evenly(cfg, targets, columns)[0])

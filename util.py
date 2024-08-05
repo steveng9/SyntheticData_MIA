@@ -42,13 +42,14 @@ class Config:
             self,
             data_name,
             n_runs_MA=30,
-            train_sizes={100: 10, 316: 26, 1_000: 64, 3162: 160, 10_000: 400, 31_622: 1000},
+            # train_sizes={100: 10, 316: 26, 1_000: 64, 3162: 160, 10_000: 400, 31_622: 1000},
+            train_sizes={100: 10, 316: 18, 1_000: 32, 3162: 56, 10_000: 100, 31_623: 178},
             train_size=1_000,
             set_MI=False,
             household_min_size=5,
             # epsilons=list(reversed([round(10 ** x, 2) for x in np.arange(-1, 3.1, 1 / 3)])),
             epsilons=[round(10 ** x, 2) for x in np.arange(-1, 3.1, 1 / 3)],
-            check_arbitrary_fps=False,
+            check_arbitrary_fps=True,
 
             # weight threshold (values) is based epsilon (keys)
             fp_weight_thresholds={.01: .5, 1: .6, 10: .7, 100: .8, 1000: .85},
