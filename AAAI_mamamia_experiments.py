@@ -43,7 +43,7 @@ min_HH_size = 5
 DIR = "/home/golobs/"
 
 FPs_directory = DIR + "focalpoints/"
-# FPs_directory = "/datadrive/focalpoints/"
+# FPs_directory = "experiment_artifacts/focalpoints/"
 
 FP_completed_file = FPs_directory + "FP_completed_file.txt"
 
@@ -125,18 +125,18 @@ def shadow_model():
     # example command: "python3 AAAI_.py shadowmodel A mst 3.16"
     experiment = sys.argv[2]
     sdg = sys.argv[3]
-    param = sys.argv[4]
     experiment_method = experiment_methods[experiment]
     sdg_method = sdg_methods[sdg]
 
-    experiment_method(sdg, sdg_method, param)
+    experiment_method(sdg, sdg_method)
 
 
 def fp_filename(sdg, epsilon, n, data):
     return f"focalpoints/FP4_{sdg}_e{fo(epsilon)}_n{n}_{data}"
 
 
-def shadow_model_experiment_A(sdg, sdg_method, param):
+def shadow_model_experiment_A(sdg, sdg_method):
+    param = sys.argv[4]
     cfg = Config("snake")
     _, aux, columns, meta, _ = get_data(cfg)
     epsilon = float(param)
@@ -159,7 +159,8 @@ def shadow_model_experiment_A(sdg, sdg_method, param):
 
 
 
-def shadow_model_experiment_B(sdg, sdg_method, param):
+def shadow_model_experiment_B(sdg, sdg_method):
+    param = sys.argv[4]
     cfg = Config("snake")
     _, aux, columns, meta, _ = get_data(cfg)
     n_size = int(param)
@@ -183,7 +184,9 @@ def shadow_model_experiment_B(sdg, sdg_method, param):
 
 
 
-def shadow_model_experiment_D(sdg, sdg_method, param):
+def shadow_model_experiment_D(sdg, sdg_method):
+    param = sys.argv[4]
+    skip_snake = len(sys.argv) >= 6
 
     snake_cfg = Config("snake")
     cali_cfg = Config("cali")
@@ -199,20 +202,25 @@ def shadow_model_experiment_D(sdg, sdg_method, param):
     runtime_snake = {"time": 0, "num_sets": 0}
     runtime_cali = {"time": 0, "num_sets": 0}
 
-    for _ in tqdm(range(n_FP_shadowruns)):
-        start = time.process_time()
-        fps = sdg_method(snake_cfg, snake_aux, snake_columns, snake_cfg.categorical_columns, snake_meta, eps, expD.n, filename_snake)
-        end = time.process_time()
-        runtime_snake["time"] += (end - start)
-        runtime_snake["num_sets"] += 1
+    if not skip_snake:
+        for _ in tqdm(range(n_FP_shadowruns)):
+            start = time.process_time()
+            fps = sdg_method(snake_cfg, snake_aux, snake_columns, snake_cfg.categorical_columns, snake_meta, eps, expD.n, filename_snake)
+            end = time.process_time()
+            runtime_snake["time"] += (end - start)
+            runtime_snake["num_sets"] += 1
+        print(f"completed FP modelling for experiment D, e{eps}, n{expD.n}, snake")
+    else:
+        print(f"...skipping snake for experiment D, e{eps}, n{expD.n}")
+
     for _ in tqdm(range(n_FP_shadowruns)):
         start = time.process_time()
         fps = sdg_method(cali_cfg, cali_aux, cali_columns, cali_cfg.categorical_columns, cali_meta, eps, expD.n, filename_cali)
         end = time.process_time()
         runtime_cali["time"] += (end - start)
         runtime_cali["num_sets"] += 1
+    print(f"completed FP modelling for experiment D, e{eps}, n{expD.n}, cali")
 
-    print(f"completed FP modelling for experiment D, e{eps}, n{expD.n}")
     with open(FP_completed_file, "a") as f:
         f.writelines(f"{sdg}, {fo(eps)}, {expD.n}, snake\n")
         f.writelines(f"{sdg}, {fo(eps)}, {expD.n}, cali\n")

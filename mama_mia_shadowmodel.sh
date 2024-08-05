@@ -80,7 +80,7 @@ nohup python3 AAAI_mamamia_experiments.py shadowmodel D mst 0.10 > outfiles/D_0.
 nohup python3 AAAI_mamamia_experiments.py shadowmodel D mst 0.32 > outfiles/D_0.32.txt &
 nohup python3 AAAI_mamamia_experiments.py shadowmodel D mst 1.00 > outfiles/D_1.00.txt &
 nohup python3 AAAI_mamamia_experiments.py shadowmodel D mst 3.16 > outfiles/D_3.16.txt &
-#nohup python3 AAAI_mamamia_experiments.py shadowmodel D mst 10.00 > outfiles/D_10.00.txt &
+nohup python3 AAAI_mamamia_experiments.py shadowmodel D mst 10.00 True > outfiles/D_10.00.txt & # snake FPs already determined in experiment B
 nohup python3 AAAI_mamamia_experiments.py shadowmodel D mst 31.62 > outfiles/D_31.62.txt &
 nohup python3 AAAI_mamamia_experiments.py shadowmodel D mst 100.00 > outfiles/D_100.00.txt &
 nohup python3 AAAI_mamamia_experiments.py shadowmodel D mst 316.23 > outfiles/D_316.23.txt &
@@ -90,7 +90,7 @@ nohup python3 AAAI_mamamia_experiments.py shadowmodel D priv 0.10 > outfiles/D_p
 nohup python3 AAAI_mamamia_experiments.py shadowmodel D priv 0.32 > outfiles/D_priv_0.32.txt &
 nohup python3 AAAI_mamamia_experiments.py shadowmodel D priv 1.00 > outfiles/D_priv_1.00.txt &
 nohup python3 AAAI_mamamia_experiments.py shadowmodel D priv 3.16 > outfiles/D_priv_3.16.txt &
-#nohup python3 AAAI_mamamia_experiments.py shadowmodel D priv 10.00 > outfiles/D_priv_10.00.txt &
+nohup python3 AAAI_mamamia_experiments.py shadowmodel D priv 10.00 True > outfiles/D_priv_10.00.txt & # snake FPs already determined in experiment B
 nohup python3 AAAI_mamamia_experiments.py shadowmodel D priv 31.62 > outfiles/D_priv_31.62.txt &
 nohup python3 AAAI_mamamia_experiments.py shadowmodel D priv 100.00 > outfiles/D_priv_100.00.txt &
 nohup python3 AAAI_mamamia_experiments.py shadowmodel D priv 316.23 > outfiles/D_priv_316.23.txt &
@@ -100,7 +100,7 @@ nohup python3 AAAI_mamamia_experiments.py shadowmodel D gsd 0.10 > outfiles/D_gs
 nohup python3 AAAI_mamamia_experiments.py shadowmodel D gsd 0.32 > outfiles/D_gsd_0.32.txt &
 nohup python3 AAAI_mamamia_experiments.py shadowmodel D gsd 1.00 > outfiles/D_gsd_1.00.txt &
 nohup python3 AAAI_mamamia_experiments.py shadowmodel D gsd 3.16 > outfiles/D_gsd_3.16.txt &
-#nohup python3 AAAI_mamamia_experiments.py shadowmodel D gsd 10.00 > outfiles/D_gsd_10.00.txt &
+nohup python3 AAAI_mamamia_experiments.py shadowmodel D gsd 10.00 True > outfiles/D_gsd_10.00.txt & # snake FPs already determined in experiment B
 nohup python3 AAAI_mamamia_experiments.py shadowmodel D gsd 31.62 > outfiles/D_gsd_31.62.txt &
 nohup python3 AAAI_mamamia_experiments.py shadowmodel D gsd 100.00 > outfiles/D_gsd_100.00.txt &
 nohup python3 AAAI_mamamia_experiments.py shadowmodel D gsd 316.23 > outfiles/D_gsd_316.23.txt &
