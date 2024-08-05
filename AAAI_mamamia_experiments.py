@@ -242,6 +242,9 @@ def shadow_model_experiment_D(sdg, sdg_method):
 
 
 def mama_mia():
+    if not Path(attack_completed_file).exists():
+        with open(attack_completed_file, "w") as f:
+            f.writelines("sdg, epsilon, N, data, overlap, setMI\n")
 
     experiment = sys.argv[2]
     sdg = sys.argv[3]
