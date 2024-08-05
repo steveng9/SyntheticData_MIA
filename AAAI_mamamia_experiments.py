@@ -43,7 +43,7 @@ min_HH_size = 5
 DIR = "/home/golobs/"
 
 FPs_directory = DIR + "focalpoints/"
-# FPs_directory = "experiment_artifacts/focalpoints/"
+# FPs_directory = DIR + "experiment_artifacts/focalpoints/"
 
 FP_completed_file = FPs_directory + "FP_completed_file.txt"
 
@@ -100,8 +100,6 @@ def main():
 
 def shadow_model():
 
-    # TODO: measure runtime
-
     # FPs_completed = Path(FP_completed_file).read_text() if Path(FP_completed_file).exists() else ""
     if not Path(FP_completed_file).exists():
         with open(FP_completed_file, "w") as f:
@@ -143,7 +141,7 @@ def shadow_model_experiment_A(sdg, sdg_method):
 
     filename = fp_filename(sdg, epsilon, expA.n, "snake")
     runtime_filename = filename + "_runtime"
-    runtime = {"time": 0, "num_sets": 0}
+    runtime = load_artifact(runtime_filename) or {"time": 0, "num_sets": 0}
 
     for _ in tqdm(range(n_FP_shadowruns)):
         start = time.process_time()
@@ -167,7 +165,7 @@ def shadow_model_experiment_B(sdg, sdg_method):
 
     filename = fp_filename(sdg, expB.eps, n_size, "snake")
     runtime_filename = filename + "_runtime"
-    runtime = {"time": 0, "num_sets": 0}
+    runtime = load_artifact(runtime_filename) or {"time": 0, "num_sets": 0}
 
     for _ in tqdm(range(n_FP_shadowruns)):
         start = time.process_time()
@@ -199,8 +197,8 @@ def shadow_model_experiment_D(sdg, sdg_method):
     filename_cali = fp_filename(sdg, eps, expD.n, "cali")
     runtime_filename_snake = filename_snake + "_runtime"
     runtime_filename_cali = filename_cali + "_runtime"
-    runtime_snake = {"time": 0, "num_sets": 0}
-    runtime_cali = {"time": 0, "num_sets": 0}
+    runtime_snake = load_artifact(runtime_filename_snake) or {"time": 0, "num_sets": 0}
+    runtime_cali = load_artifact(runtime_filename_cali) or {"time": 0, "num_sets": 0}
 
     if not skip_snake:
         for _ in tqdm(range(n_FP_shadowruns)):
