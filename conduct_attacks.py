@@ -321,8 +321,8 @@ def run_all_gsd_experiments(cfg, all_possible_queries, encoded_aux, encoded_synt
     plot_output(scores)
 
     arbitrary_FP_ma = None
-    if cfg.check_arbitrary_fps:
-        assert False, "not yet implemented!"
+    # if cfg.check_arbitrary_fps:
+    #     assert False, "not yet implemented!"
         # arbitrary_conditionals = generate_arbitrary_FPs(columns, len(columns)-1, 1, max_conditional_size)
         # _, arbitrary_FP_ma, _arbitrary_tailored_auc = custom_gsd_attack(cfg, eps, aux, synth, targets, target_ids, membership, arbitrary_conditionals)
 
@@ -405,8 +405,8 @@ def custom_privbayes_attack(cfg, eps, aux, synth, targets, target_ids, membershi
         for child_val, *parent_vals in target_vals:
             parent_vals = tuple(parent_vals)
             synth_conditional = D_synth.get(parent_vals or True, default=pd.Series(dtype=np.float64)).get(child_val, default=default_val)
-            # aux_conditional = max(D_aux.get(parent_vals or True, default=pd.Series(dtype=np.float64)).get(child_val, default=default_val), default_val)
-            aux_conditional = D_aux.get(parent_vals or True).get(child_val)
+            aux_conditional = max(D_aux.get(parent_vals or True, default=pd.Series(dtype=np.float64)).get(child_val, default=default_val), default_val)
+            # aux_conditional = D_aux.get(parent_vals or True).get(child_val)
             # ratio_conditionals.append(weight * synth_conditional / aux_conditional)
             ratio_conditionals.append(synth_conditional / aux_conditional)
 

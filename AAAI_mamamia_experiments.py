@@ -392,7 +392,7 @@ def attack_experiment_A(sdg, sdg_method):
     epsilon = float(sys.argv[4])
     overlap = sys.argv[5] == "True"
     set_MI = sys.argv[6] == "True"
-    cfg = Config("snake", set_MI=set_MI, train_size=expA.n, overlapping_aux=overlap)
+    cfg = Config("snake", set_MI=set_MI, train_size=expA.n, overlapping_aux=overlap, check_arbitrary_fps=False)
     _, full_aux, columns, meta, _ = get_data(cfg)
 
     results_filename = attack_results_filename(sdg, epsilon, expA.n, "snake", overlap, set_MI)
@@ -453,7 +453,7 @@ def attack_experiment_B(sdg, sdg_method):
     n = int(sys.argv[4])
     overlap = sys.argv[5] == "True"
     set_MI = sys.argv[6] == "True"
-    cfg = Config("snake", set_MI=set_MI, train_size=n, overlapping_aux=overlap)
+    cfg = Config("snake", set_MI=set_MI, train_size=n, overlapping_aux=overlap, check_arbitrary_fps=False)
     _, full_aux, columns, meta, _ = get_data(cfg)
 
     results_filename = attack_results_filename(sdg, expB.eps, n, "snake", overlap, set_MI)
@@ -519,7 +519,7 @@ def attack_experiment_D(sdg, sdg_method):
 
 
     for data in datasets:
-        cfg = Config(data, set_MI=set_MI, train_size=expD.n, overlapping_aux=overlap)
+        cfg = Config(data, set_MI=set_MI, train_size=expD.n, overlapping_aux=overlap, check_arbitrary_fps=True)
         _, full_aux, columns, meta, _ = get_data(cfg)
 
         results_filename = attack_results_filename(sdg, epsilon, expD.n, data, overlap, set_MI)
