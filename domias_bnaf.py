@@ -193,10 +193,8 @@ for i in range(C.n_runs):
         target_ids, targets, membership, train, kde_sample_seed = sample_experimental_data(cfg, aux, columns)
         synth = gen_fns[sdg](cfg, train, meta, n_size, epsilon)
 
-    targets_encoded = encode_data_for_bnaf(targets)
-    targets_encoded_np = targets_encoded.to_numpy()
-    synth_encoded = encode_data_for_bnaf(synth)
-    synth_encoded_np = synth_encoded.to_numpy()
+    targets_encoded_np = encode_data_for_bnaf(targets).to_numpy()
+    synth_encoded_np = encode_data_for_bnaf(synth).to_numpy()
 
     print()
     print()
@@ -235,14 +233,14 @@ for i in range(C.n_runs):
         )
 
         p_G_evaluated = np.exp(
-            compute_log_p_x(p_G_model, torch.as_tensor(targets_encoded).float().to('cpu'))
+            compute_log_p_x(p_G_model, torch.as_tensor(targets_encoded_np).float().to('cpu'))
             .cpu()
             .detach()
             .numpy()
         )
 
         p_R_evaluated = np.exp(
-            compute_log_p_x(p_R_model, torch.as_tensor(targets_encoded).float().to('cpu'))
+            compute_log_p_x(p_R_model, torch.as_tensor(targets_encoded_np).float().to('cpu'))
             .cpu()
             .detach()
             .numpy()
