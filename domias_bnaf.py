@@ -1,6 +1,8 @@
 import time
 from pathlib import Path
 
+import pandas as pd
+
 from util import *
 from gen_tapas_shadowsets import gen_mst, gen_priv, gen_gsd
 
@@ -138,6 +140,7 @@ categorical_columns = ['female', 'cow1', 'mind16']
 # categorical_columns_idx = [column_idx for column_idx in range(15) if column_idx not in ordered_columns_idx]
 # categorical_columns = [column_name for column_name in meta.name.values.tolist() if column_name not in ordered_columns]
 
+meta = pd.DataFrame(meta)
 ord_enc = OrdinalEncoder(categories=[meta.representation.values.tolist()[i] for i in ordered_columns_idx])
 if encode_ordinal and data == "snake":
     ord_enc.fit(aux[ordered_columns])
