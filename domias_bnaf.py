@@ -144,7 +144,7 @@ meta = pd.DataFrame(meta)
 ord_enc = OrdinalEncoder(categories=[meta.representation.values.tolist()[i] for i in ordered_columns_idx])
 if encode_ordinal and data == "snake":
     ord_enc.fit(aux[ordered_columns])
-oh_enc = OneHotEncoder(sparse=False, categories=[meta.representation.values.tolist()[i] for i in categorical_columns_idx])
+oh_enc = OneHotEncoder(categories=[meta.representation.values.tolist()[i] for i in categorical_columns_idx])
 if encode_categorical and data == "snake":
     oh_enc.fit(aux[categorical_columns])
 
