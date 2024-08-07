@@ -19,8 +19,8 @@ n_ensemble = 1
 epochs = 50
 early_stopping = 20
 
-DIR = DATA_DIR + "Thesis/"
-# DIR = "/home/golobs/"
+# DIR = DATA_DIR + "Thesis/"
+DIR = "/home/golobs/"
 results_dir = "domias_bnaf/"
 attack_completed_file = DIR + "experiment_artifacts/" + results_dir + "attack_completed_file.txt"
 n_sizes = [100, 316, 1_000, 3_162, 10_000, 31_623]
@@ -141,11 +141,11 @@ categorical_columns = ['female', 'cow1', 'mind16']
 # categorical_columns_idx = [column_idx for column_idx in range(15) if column_idx not in ordered_columns_idx]
 # categorical_columns = [column_name for column_name in meta.name.values.tolist() if column_name not in ordered_columns]
 
-meta = pd.DataFrame(meta)
-ord_enc = OrdinalEncoder(categories=[meta.representation.values.tolist()[i] for i in ordered_columns_idx])
+meta2 = pd.DataFrame(meta)
+ord_enc = OrdinalEncoder(categories=[meta2.representation.values.tolist()[i] for i in ordered_columns_idx])
 if encode_ordinal and data == "snake":
     ord_enc.fit(aux[ordered_columns])
-oh_enc = OneHotEncoder(sparse_output=False, categories=[meta.representation.values.tolist()[i] for i in categorical_columns_idx])
+oh_enc = OneHotEncoder(sparse_output=False, categories=[meta2.representation.values.tolist()[i] for i in categorical_columns_idx])
 if encode_categorical and data == "snake":
     oh_enc.fit(aux[categorical_columns])
 
