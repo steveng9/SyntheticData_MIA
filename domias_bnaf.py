@@ -121,8 +121,8 @@ if task == "domias_status":
     sys.exit()
 
 sdg = sys.argv[2]
-epsilon = sys.argv[3]
-n_size = sys.argv[4]
+epsilon = float(sys.argv[3])
+n_size = int(sys.argv[4])
 data = sys.argv[5]
 
 cfg = Config(data, train_size=n_size, set_MI=False, overlapping_aux=True)
