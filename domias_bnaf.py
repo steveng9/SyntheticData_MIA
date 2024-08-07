@@ -12,19 +12,20 @@ import torch
 from domias.bnaf.density_estimation import compute_log_p_x, density_estimator_trainer
 
 
-use_pregenerated_synthsets = True
+use_pregenerated_synthsets = False
 encode_ordinal = True
 encode_categorical = True
 n_ensemble = 1
 epochs = 50
 early_stopping = 20
 
-DIR = "/home/golobs/"
+DIR = DATA_DIR + "Thesis/"
+# DIR = "/home/golobs/"
 results_dir = "domias_bnaf/"
 attack_completed_file = DIR + "experiment_artifacts/" + results_dir + "attack_completed_file.txt"
 n_sizes = [100, 316, 1_000, 3_162, 10_000, 31_623]
 epsilons = [round(10 ** x, 2) for x in np.arange(-1, 3.1, 1 / 2)]
-sdgs = ["mst", "priv", "gsd", "rap"]
+sdgs = ["mst", "priv", "gsd"]
 
 def print_attack_status(location=results_dir, completed_file=attack_completed_file):
     attacks_completed = open(completed_file, "r").readlines()
@@ -144,7 +145,7 @@ meta = pd.DataFrame(meta)
 ord_enc = OrdinalEncoder(categories=[meta.representation.values.tolist()[i] for i in ordered_columns_idx])
 if encode_ordinal and data == "snake":
     ord_enc.fit(aux[ordered_columns])
-oh_enc = OneHotEncoder(categories=[meta.representation.values.tolist()[i] for i in categorical_columns_idx])
+oh_enc = OneHotEncoder(sparse_output=False, categories=[meta.representation.values.tolist()[i] for i in categorical_columns_idx])
 if encode_categorical and data == "snake":
     oh_enc.fit(aux[categorical_columns])
 
@@ -188,7 +189,7 @@ for i in range(C.n_runs):
 
     else:
         gen_fns = {"mst": gen_mst, "priv": gen_priv, "gsd": gen_gsd}
-        target_ids, targets, membership, train, kde_sample_seed = sample_experimental_data(cfg, full_aux, columns)
+        target_ids, targets, membership, train, kde_sample_seed = sample_experimental_data(cfg, aux, columns)
         synth = gen_fns[sdg](cfg, train, meta, n_size, epsilon)
 
     targets_encoded = encode_data_for_bnaf(targets)
