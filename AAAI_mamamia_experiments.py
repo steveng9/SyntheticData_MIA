@@ -45,10 +45,10 @@ DIR = "/home/golobs/"
 # FPs_directory = DIR + "focalpoints/"
 # results_directory = DIR + "focalpoints/"
 FPs_directory = DIR + "experiment_artifacts/focalpoints/"
-results_directory = DIR + "experiment_artifacts/mamamia_results/"
+results_directory = "mamamia_results/"
 
 FP_completed_file = FPs_directory + "FP_completed_file.txt"
-attack_completed_file = results_directory + "attack_completed_file.txt"
+attack_completed_file = DIR + "experiment_artifacts/" + results_directory + "attack_completed_file.txt"
 
 rng = default_rng()
 
