@@ -1,9 +1,9 @@
 import time
-
-import pandas as pd
+from pathlib import Path
 
 from util import *
 from gen_tapas_shadowsets import gen_mst, gen_priv, gen_gsd
+from AAAI_mamamia_experiments import print_attack_status, expA, expB, expD, DIR, attack_results_filename
 
 from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, OrdinalEncoder, OneHotEncoder
@@ -11,23 +11,26 @@ import torch
 from domias.bnaf.density_estimation import compute_log_p_x, density_estimator_trainer
 
 
-
-
-
-# DATA_DIR = "/Users/golobs/Documents/GradSchool/SNAKE/"
-
+use_pregenerated_synthsets = True
 encode_ordinal = True
 encode_categorical = True
-use_pregenerated_synthsets = True
 n_ensemble = 1
 epochs = 50
 early_stopping = 20
 
-results_dir = DATA_DIR + "domias_bnaf/"
-results_filename = "results.txt"
+results_dir = DIR + "experiment_artifacts/domias_bnaf/"
+attack_completed_file = results_dir + "attack_completed_file.txt"
+
+if not Path(attack_completed_file).exists():
+    with open(attack_completed_file, "w") as f:
+        f.writelines("sdg, epsilon, N, data, overlap, setMI\n")
 
 
-# experiment = sys.argv[2]
+task = sys.argv[1]
+if task == "status":
+    print_attack_status(location=results_dir, completed_file=attack_completed_file)
+    sys.exit()
+
 sdg = sys.argv[2]
 epsilon = sys.argv[3]
 n_size = sys.argv[4]
@@ -67,14 +70,22 @@ def encode_data_for_bnaf(unencoded):
 aux_encoded = encode_data_for_bnaf(aux)
 
 
-aucs = []
-runtime = 0
+
+results_filename = attack_results_filename(results_dir, sdg, epsilon, n_size, data, True, False)
+results = load_artifact(results_filename) or {
+    "BNAF_AUC": [],
+    "BNAF_time": [],
+}
 
 for i in range(C.n_runs):
 
+    runtime = 0
+
     if use_pregenerated_synthsets and data == "snake":
-        synth = pd.read_parquet(DATA_DIR + f"shadowsets/{sdg}/s{i}.parquet")
-        label_matrix = load_artifact(DATA_DIR + f"shadowsets/label_matrix_singleMI")
+        synth = pd.read_parquet(DIR + f"experiment_artifacts/shadowsets/{sdg}/s{i}.parquet")
+        label_matrix = load_artifact(DIR + f"experiment_artifacts/shadowsets/label_matrix_singleMI")
+
+        #TODO are these in the correct order? Do they need to be sorted?
         target_ids = sorted(label_matrix.columns)
         membership = label_matrix.reindex(sorted(label_matrix.columns), axis=1).to_numpy()[i]
         targets = aux[aux.index.isin(target_ids)]
@@ -152,11 +163,16 @@ for i in range(C.n_runs):
     p_rel[np.isinf(p_rel)] = 1e26
 
     predictions, MA, AUC = score_attack(cfg, p_rel, [1] * targets.shape[0], targets, target_ids, membership, activation_fn=activate_3)
-    aucs.append(AUC)
+
+    if AUC is not None:
+        results["BNAF_AUC"].append(AUC)
+        results["BNAF_time"].append(runtime)
+
+    # save off intermediate results
+    dump_artifact(results, results_filename)
 
 
-with open(results_dir + f"{data}_{sdg}_e{fo(epsilon)}_n{n_size}_{results_filename}.txt", 'w') as f:
-    f.write(f"AUC: {np.mean(aucs)}\n")
-    f.write(f"runtime: {runtime}\n\n")
-    f.write(f"all AUCs\n")
-    f.writelines(f"{x}\n" for x in aucs)
+
+print(f"completed DOMIAS BNAF attack for {sdg} e{epsilon}, n{n_size}, {data}")
+with open(attack_completed_file, "a") as f:
+    f.writelines(f"{sdg}, {fo(epsilon)}, {n_size}, {data}, True, False\n")

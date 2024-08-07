@@ -45,7 +45,7 @@ DIR = "/home/golobs/"
 # FPs_directory = DIR + "focalpoints/"
 # results_directory = DIR + "focalpoints/"
 FPs_directory = DIR + "experiment_artifacts/focalpoints/"
-results_directory = DIR + "experiment_artifacts/focalpoints/"
+results_directory = DIR + "experiment_artifacts/mamamia_results/"
 
 FP_completed_file = FPs_directory + "FP_completed_file.txt"
 attack_completed_file = results_directory + "attack_completed_file.txt"
@@ -106,8 +106,8 @@ def fp_filename(sdg, epsilon, n, data):
     return f"focalpoints/FP4_{sdg}_e{fo(epsilon)}_n{n}_{data}"
 
 
-def attack_results_filename(sdg, epsilon, n, data, overlap, set_MI):
-    return f"mamamia_results/results_{sdg}_e{fo(epsilon)}_n{n}_{data}_o{overlap}_set{set_MI}"
+def attack_results_filename(location, sdg, epsilon, n, data, overlap, set_MI):
+    return f"{location}results_{sdg}_e{fo(epsilon)}_n{n}_{data}_o{overlap}_set{set_MI}"
 
 
 def fo(eps):
@@ -310,8 +310,8 @@ def print_status():
 
 
 
-def print_attack_status():
-    attacks_completed = open(attack_completed_file, "r").readlines()
+def print_attack_status(location=results_directory, completed_file=attack_completed_file):
+    attacks_completed = open(completed_file, "r").readlines()
     completed = []
 
     print("\nexperiment A")
@@ -319,7 +319,7 @@ def print_attack_status():
         for eps in epsilons:
             if f"{sdg}, {fo(eps)}, {expA.n}, snake, True, False\n" not in attacks_completed and eps not in expA.exclude.get(sdg, []):
                 print(f"\t{sdg}, e{fo(eps)}, n{expA.n}, snake", end="...")
-                progress = max([len(l) for l in (load_artifact(attack_results_filename(sdg, eps, expA.n, "snake", True, False)) or {".": []}).values()])
+                progress = max([len(l) for l in (load_artifact(attack_results_filename(location, sdg, eps, expA.n, "snake", True, False)) or {".": []}).values()])
                 print(f"{progress} / {C.n_runs}")
             else:
                 completed.append(f"{sdg}, {fo(eps)}, {expA.n}, snake, True, False")
@@ -332,7 +332,7 @@ def print_attack_status():
         for n in n_sizes:
             if f"{sdg}, {fo(expB.eps)}, {n}, snake, True, False\n" not in attacks_completed and n not in expB.exclude.get(sdg, []):
                 print(f"\t{sdg}, e{fo(expB.eps)}, n{n}, snake", end="...")
-                progress = max([len(l) for l in (load_artifact(attack_results_filename(sdg, expB.eps, n, "snake", True, False)) or {".": []}).values()])
+                progress = max([len(l) for l in (load_artifact(attack_results_filename(location, sdg, expB.eps, n, "snake", True, False)) or {".": []}).values()])
                 print(f"{progress} / {C.n_runs}")
             else:
                 completed.append(f"{sdg}, {fo(expB.eps)}, {n}, snake, True, False")
@@ -345,7 +345,7 @@ def print_attack_status():
             for data in ["snake", "cali"]:
                 if f"{sdg}, {fo(eps)}, {expD.n}, {data}, True, False\n" not in attacks_completed and eps not in expD.exclude.get(sdg, []):
                     print(f"\t{sdg}, e{fo(eps)}, n{expD.n}, {data}", end="...")
-                    progress = max([len(l) for l in (load_artifact(attack_results_filename(sdg, eps, expD.n, data, True, False)) or {".": []}).values()])
+                    progress = max([len(l) for l in (load_artifact(attack_results_filename(location, sdg, eps, expD.n, data, True, False)) or {".": []}).values()])
                     print(f"{progress} / {C.n_runs}")
                     # print("NOT LAUNCHED")
                 else:
@@ -359,7 +359,7 @@ def print_attack_status():
             for data in ["snake", "cali"]:
                 if f"{sdg}, {fo(eps)}, {expD.n}, {data}, False, False\n" not in attacks_completed and eps not in expD.exclude.get(sdg, []):
                     print(f"\t{sdg}, e{fo(eps)}, n{expD.n}, {data}", end="...")
-                    progress = max([len(l) for l in (load_artifact(attack_results_filename(sdg, eps, expD.n, data, False, False)) or {".": []}).values()])
+                    progress = max([len(l) for l in (load_artifact(attack_results_filename(location, sdg, eps, expD.n, data, False, False)) or {".": []}).values()])
                     print(f"{progress} / {C.n_runs}")
                     # print("NOT LAUNCHED")
                 else:
@@ -373,7 +373,7 @@ def print_attack_status():
             for data in ["snake", "cali"]:
                 if f"{sdg}, {fo(eps)}, {expD.n}, {data}, True, True\n" not in attacks_completed and eps not in expD.exclude.get(sdg, []):
                     print(f"\t{sdg}, e{fo(eps)}, n{expD.n}, {data}", end="...")
-                    progress = max([len(l) for l in (load_artifact(attack_results_filename(sdg, eps, expD.n, data, True, True)) or {".": []}).values()])
+                    progress = max([len(l) for l in (load_artifact(attack_results_filename(location, sdg, eps, expD.n, data, True, True)) or {".": []}).values()])
                     print(f"{progress} / {C.n_runs}")
                     # print("NOT LAUNCHED")
                 else:
@@ -395,7 +395,7 @@ def attack_experiment_A(sdg, sdg_method):
     cfg = Config("snake", set_MI=set_MI, train_size=expA.n, overlapping_aux=overlap, check_arbitrary_fps=False)
     _, full_aux, columns, meta, _ = get_data(cfg)
 
-    results_filename = attack_results_filename(sdg, epsilon, expA.n, "snake", overlap, set_MI)
+    results_filename = attack_results_filename(results_directory, sdg, epsilon, expA.n, "snake", overlap, set_MI)
     # runtime_filename = results_filename + "_runtime"
     # runtime = load_artifact(runtime_filename) or {"time": 0, "num_runs": 0}
 
@@ -456,7 +456,7 @@ def attack_experiment_B(sdg, sdg_method):
     cfg = Config("snake", set_MI=set_MI, train_size=n, overlapping_aux=overlap, check_arbitrary_fps=False)
     _, full_aux, columns, meta, _ = get_data(cfg)
 
-    results_filename = attack_results_filename(sdg, expB.eps, n, "snake", overlap, set_MI)
+    results_filename = attack_results_filename(results_directory, sdg, expB.eps, n, "snake", overlap, set_MI)
     # runtime_filename = results_filename + "_runtime"
     # runtime = load_artifact(runtime_filename) or {"time": 0, "num_runs": 0}
 
@@ -522,7 +522,7 @@ def attack_experiment_D(sdg, sdg_method):
         cfg = Config(data, set_MI=set_MI, train_size=expD.n, overlapping_aux=overlap, check_arbitrary_fps=True)
         _, full_aux, columns, meta, _ = get_data(cfg)
 
-        results_filename = attack_results_filename(sdg, epsilon, expD.n, data, overlap, set_MI)
+        results_filename = attack_results_filename(results_directory, sdg, epsilon, expD.n, data, overlap, set_MI)
         # runtime_filename = results_filename + "_runtime"
         # runtime = load_artifact(runtime_filename) or {"time": 0, "num_runs": 0}
 
