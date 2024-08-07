@@ -119,6 +119,8 @@ def determine_weight_threshold(cfg, eps, fp_weights):
     # choose highest weight threshold of when to incorporate focal-point based on epsilon
     return max(fp_weights.values()) * max([t for e, t in cfg.fp_weight_thresholds.items() if eps >= e])
 
+def fo(eps):
+    return '{0:.2f}'.format(eps)
 
 def make_FP_filename(cfg, sdg, eps, specify_epsilon=True, try_epsilons=C.shadow_epsilons):
     eps = min([e for e in try_epsilons if eps <= e])
