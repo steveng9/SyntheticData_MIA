@@ -18,8 +18,8 @@ n_ensemble = 1
 epochs = 50
 early_stopping = 20
 
-results_dir = DIR + "experiment_artifacts/domias_bnaf/"
-attack_completed_file = results_dir + "attack_completed_file.txt"
+results_dir = "domias_bnaf/"
+attack_completed_file = DIR + "experiment_artifacts/" + results_dir + "attack_completed_file.txt"
 
 if not Path(attack_completed_file).exists():
     with open(attack_completed_file, "w") as f:
