@@ -3,7 +3,6 @@ from pathlib import Path
 
 from util import *
 from gen_tapas_shadowsets import gen_mst, gen_priv, gen_gsd
-from AAAI_mamamia_experiments import print_attack_status, expA, expB, expD, DIR, attack_results_filename
 
 from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, OrdinalEncoder, OneHotEncoder
@@ -18,8 +17,98 @@ n_ensemble = 1
 epochs = 50
 early_stopping = 20
 
+DIR = "/home/golobs/"
 results_dir = "domias_bnaf/"
 attack_completed_file = DIR + "experiment_artifacts/" + results_dir + "attack_completed_file.txt"
+n_sizes = [100, 316, 1_000, 3_162, 10_000, 31_623]
+epsilons = [round(10 ** x, 2) for x in np.arange(-1, 3.1, 1 / 2)]
+sdgs = ["mst", "priv", "gsd", "rap"]
+
+def print_attack_status(location=results_dir, completed_file=attack_completed_file):
+    attacks_completed = open(completed_file, "r").readlines()
+    completed = []
+
+    print("\nexperiment A")
+    for sdg in sdgs:
+        for eps in epsilons:
+            if f"{sdg}, {fo(eps)}, {expA.n}, snake, True, False\n" not in attacks_completed and eps not in expA.exclude.get(sdg, []):
+                print(f"\t{sdg}, e{fo(eps)}, n{expA.n}, snake", end="...")
+                progress = max([len(l) for l in (load_artifact(attack_results_filename(location, sdg, eps, expA.n, "snake", True, False)) or {".": []}).values()])
+                print(f"{progress} / {C.n_runs}")
+            else:
+                completed.append(f"{sdg}, {fo(eps)}, {expA.n}, snake, True, False")
+
+        print()
+
+
+    print("\nexperiment B")
+    for sdg in sdgs:
+        for n in n_sizes:
+            if f"{sdg}, {fo(expB.eps)}, {n}, snake, True, False\n" not in attacks_completed and n not in expB.exclude.get(sdg, []):
+                print(f"\t{sdg}, e{fo(expB.eps)}, n{n}, snake", end="...")
+                progress = max([len(l) for l in (load_artifact(attack_results_filename(location, sdg, expB.eps, n, "snake", True, False)) or {".": []}).values()])
+                print(f"{progress} / {C.n_runs}")
+            else:
+                completed.append(f"{sdg}, {fo(expB.eps)}, {n}, snake, True, False")
+        print()
+
+
+    print("\nexperiment D")
+    for sdg in sdgs:
+        for eps in epsilons:
+            for data in ["snake", "cali"]:
+                if f"{sdg}, {fo(eps)}, {expD.n}, {data}, True, False\n" not in attacks_completed and eps not in expD.exclude.get(sdg, []):
+                    print(f"\t{sdg}, e{fo(eps)}, n{expD.n}, {data}", end="...")
+                    progress = max([len(l) for l in (load_artifact(attack_results_filename(location, sdg, eps, expD.n, data, True, False)) or {".": []}).values()])
+                    print(f"{progress} / {C.n_runs}")
+                    # print("NOT LAUNCHED")
+                else:
+                    completed.append(f"{sdg}, {fo(eps)}, {expD.n}, {data}, True, False")
+        print()
+
+
+    print("\nnon-overlapping")
+    for sdg in sdgs:
+        for eps in epsilons:
+            for data in ["snake", "cali"]:
+                if f"{sdg}, {fo(eps)}, {expD.n}, {data}, False, False\n" not in attacks_completed and eps not in expD.exclude.get(sdg, []):
+                    print(f"\t{sdg}, e{fo(eps)}, n{expD.n}, {data}", end="...")
+                    progress = max([len(l) for l in (load_artifact(attack_results_filename(location, sdg, eps, expD.n, data, False, False)) or {".": []}).values()])
+                    print(f"{progress} / {C.n_runs}")
+                    # print("NOT LAUNCHED")
+                else:
+                    completed.append(f"{sdg}, {fo(eps)}, {expD.n}, {data}, False, False")
+        print()
+
+
+    print("\nset MI")
+    for sdg in sdgs:
+        for eps in epsilons:
+            for data in ["snake", "cali"]:
+                if f"{sdg}, {fo(eps)}, {expD.n}, {data}, True, True\n" not in attacks_completed and eps not in expD.exclude.get(sdg, []):
+                    print(f"\t{sdg}, e{fo(eps)}, n{expD.n}, {data}", end="...")
+                    progress = max([len(l) for l in (load_artifact(attack_results_filename(location, sdg, eps, expD.n, data, True, True)) or {".": []}).values()])
+                    print(f"{progress} / {C.n_runs}")
+                    # print("NOT LAUNCHED")
+                else:
+                    completed.append(f"{sdg}, {fo(eps)}, {expD.n}, {data}, True, True")
+        print()
+
+    print("\ncompleted:")
+    for c in completed:
+        print(c)
+
+
+
+
+
+
+
+
+
+
+
+
 
 if not Path(attack_completed_file).exists():
     with open(attack_completed_file, "w") as f:
@@ -66,6 +155,10 @@ def encode_data_for_bnaf(unencoded):
         if encode_ordinal:
             data_encoded[ordered_columns] = ord_enc.transform(unencoded[ordered_columns])
         return data_encoded
+
+def attack_results_filename(location, sdg, epsilon, n, data, overlap, set_MI):
+    return f"{location}results_{sdg}_e{fo(epsilon)}_n{n}_{data}_o{overlap}_set{set_MI}"
+
 
 aux_encoded = encode_data_for_bnaf(aux)
 

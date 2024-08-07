@@ -35,6 +35,25 @@ from jax import numpy as jnp, random
 #from utils_data import data_sources, ohe_to_categorical
 
 
+expA = SimpleNamespace(
+    r=30,
+    n=10_000,
+    t=100,
+    exclude={},
+)
+
+expB = SimpleNamespace(
+    r=30,
+    eps=10,
+    exclude={}#"gsd": [31_623]}
+)
+
+
+expD = SimpleNamespace(
+    r=30,
+    n=1000,
+    exclude={}
+)
 
 # Experimental Configuration
 class Config:

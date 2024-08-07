@@ -63,26 +63,6 @@ epsilons_2 = [round(10 ** x, 2) for x in np.arange(-1, 3.1, 1 / 3)]
 sdgs = ["mst", "priv", "gsd", "rap"]
 # sdgs = ["mst", "priv"]
 
-# experiment parameters
-expA = SimpleNamespace(
-    r=30,
-    n=10_000,
-    t=100,
-    exclude={},
-)
-
-expB = SimpleNamespace(
-    r=30,
-    eps=10,
-    exclude={}#"gsd": [31_623]}
-)
-
-
-expD = SimpleNamespace(
-    r=30,
-    n=1000,
-    exclude={}
-)
 
 
 
@@ -583,6 +563,6 @@ def attack_experiment_D(sdg, sdg_method):
 
 
 
-
-main()
+if __name__ == '__main__':
+    main()
 
