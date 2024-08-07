@@ -27,7 +27,7 @@ if not Path(attack_completed_file).exists():
 
 
 task = sys.argv[1]
-if task == "status":
+if task == "domias_status":
     print_attack_status(location=results_dir, completed_file=attack_completed_file)
     sys.exit()
 
