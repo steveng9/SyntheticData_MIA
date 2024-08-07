@@ -60,7 +60,7 @@ t_sizes = [10, 18]
 epsilons = [round(10 ** x, 2) for x in np.arange(-1, 3.1, 1 / 2)]
 epsilons_2 = [round(10 ** x, 2) for x in np.arange(-1, 3.1, 1 / 3)]
 # epsilons = [.1, 1]
-sdgs = ["mst", "priv", "gsd", "rap"]
+sdgs = ["mst", "priv", "gsd"]
 # sdgs = ["mst", "priv"]
 
 

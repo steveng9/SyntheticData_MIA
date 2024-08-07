@@ -64,7 +64,7 @@ nohup python3 AAAI_mamamia_experiments.py attack B gsd 316 True False > outfiles
 nohup python3 AAAI_mamamia_experiments.py attack B gsd 1000 True False > outfiles/B_gsd_1000.txt &
 nohup python3 AAAI_mamamia_experiments.py attack B gsd 3162 True False > outfiles/B_gsd_3162.txt &
 #nohup python3 AAAI_mamamia_experiments.py attack B gsd 10000 True False > outfiles/B_gsd_10000.txt &
-nohup python3 AAAI_mamamia_experiments.py attack B gsd 31623 True False > outfiles/B_gsd_31623.txt &
+#nohup python3 AAAI_mamamia_experiments.py attack B gsd 31623 True False > outfiles/B_gsd_31623.txt &
 
 #nohup python3 AAAI_mamamia_experiments.py attack B rap 100 True False > outfiles/B_rap_100.txt &
 #nohup python3 AAAI_mamamia_experiments.py attack B rap 316 True False > outfiles/B_rap_316.txt &
