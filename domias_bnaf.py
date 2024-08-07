@@ -18,6 +18,7 @@ encode_categorical = True
 n_ensemble = 1
 epochs = 50
 early_stopping = 20
+batch_dim = 400
 
 # DIR = DATA_DIR + "Thesis/"
 DIR = "/home/golobs/"
@@ -164,7 +165,7 @@ def attack_results_filename(location, sdg, epsilon, n, data, overlap, set_MI):
     return f"{location}results_{sdg}_e{fo(epsilon)}_n{n}_{data}_o{overlap}_set{set_MI}"
 
 
-aux_encoded = encode_data_for_bnaf(aux)
+# aux_encoded = encode_data_for_bnaf(aux)
 
 
 
@@ -206,7 +207,8 @@ for i in range(C.n_runs):
     target_results_base = np.array([0.0] * targets.shape[0])
 
     for j in range(n_ensemble):
-        base_encoded_sample_np = aux[aux.merge(targets.drop_duplicates(), how='left', indicator=True)["_merge"] == "left_only"].sample(n=n_size).to_numpy()
+        aux_sample = aux[aux.merge(targets.drop_duplicates(), how='left', indicator=True)["_merge"] == "left_only"].sample(n=n_size)
+        aux_sample_encoded_np = encode_data_for_bnaf(aux_sample).to_numpy()
 
         #### build BNAF model
         ##---------------------------------------
@@ -220,14 +222,16 @@ for i in range(C.n_runs):
             synth_encoded_np[int(split * synth.shape[0]):],
             epochs=epochs,
             early_stopping=early_stopping,
+            batch_dim=batch_dim,
         )
 
         _, p_R_model = density_estimator_trainer(
-            base_encoded_sample_np,
-            base_encoded_sample_np[: int(split * base_encoded_sample_np.shape[0])],
-            base_encoded_sample_np[int(split * base_encoded_sample_np.shape[0]):],
+            aux_sample_encoded_np,
+            aux_sample_encoded_np[: int(split * aux_sample_encoded_np.shape[0])],
+            aux_sample_encoded_np[int(split * aux_sample_encoded_np.shape[0]):],
             epochs=epochs,
             early_stopping=early_stopping,
+            batch_dim=batch_dim,
         )
 
         p_G_evaluated = np.exp(
