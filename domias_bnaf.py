@@ -15,7 +15,7 @@ from domias.bnaf.density_estimation import compute_log_p_x, density_estimator_tr
 use_pregenerated_synthsets = False
 encode_ordinal = True
 encode_categorical = True
-n_ensemble = 1
+n_ensemble = 3
 epochs = 50
 early_stopping = 20
 batch_dim = 400
@@ -103,6 +103,8 @@ def print_attack_status(location=results_dir, completed_file=attack_completed_fi
         print(c)
 
 
+def attack_results_filename(location, sdg, epsilon, n, data, overlap, set_MI):
+    return f"{location}results_{sdg}_e{fo(epsilon)}_n{n}_{data}_o{overlap}_set{set_MI}"
 
 
 
@@ -161,8 +163,6 @@ def encode_data_for_bnaf(unencoded):
             data_encoded[ordered_columns] = ord_enc.transform(unencoded[ordered_columns])
         return data_encoded
 
-def attack_results_filename(location, sdg, epsilon, n, data, overlap, set_MI):
-    return f"{location}results_{sdg}_e{fo(epsilon)}_n{n}_{data}_o{overlap}_set{set_MI}"
 
 
 # aux_encoded = encode_data_for_bnaf(aux)
@@ -266,6 +266,8 @@ for i in range(C.n_runs):
     if AUC is not None:
         results["BNAF_AUC"].append(AUC)
         results["BNAF_time"].append(runtime)
+    else:
+        print("error calculating AUC")
 
     # save off intermediate results
     dump_artifact(results, results_filename)
