@@ -14,14 +14,14 @@ from domias.bnaf.density_estimation import compute_log_p_x, density_estimator_tr
 
 use_pregenerated_synthsets = False
 encode_ordinal = True
-encode_categorical = True
-n_ensemble = 3
-epochs = 50
+encode_categorical = False
+n_ensemble = 1
+epochs = 300
 early_stopping = 20
-batch_dim = 400
+batch_dim = 100
 
-# DIR = DATA_DIR + "Thesis/"
-DIR = "/home/golobs/"
+DIR = DATA_DIR + "Thesis/"
+# DIR = "/home/golobs/"
 results_dir = "domias_bnaf/"
 attack_completed_file = DIR + "experiment_artifacts/" + results_dir + "attack_completed_file.txt"
 n_sizes = [100, 316, 1_000, 3_162, 10_000, 31_623]
@@ -260,10 +260,12 @@ for i in range(C.n_runs):
 
     p_rel = (target_results_synth / n_ensemble) / (target_results_base / n_ensemble)
     p_rel[np.isinf(p_rel)] = 1e26
+    p_rel = np.nan_to_num(p_rel, nan=1e26)
 
     predictions, MA, AUC = score_attack(cfg, p_rel, [1] * targets.shape[0], targets, target_ids, membership, activation_fn=activate_3)
 
     if AUC is not None:
+        print(f"AUC: {AUC}")
         results["BNAF_AUC"].append(AUC)
         results["BNAF_time"].append(runtime)
     else:
