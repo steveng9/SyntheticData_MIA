@@ -214,37 +214,40 @@ for i in range(C.n_runs):
 
         start = time.process_time()
 
-        _, p_G_model = density_estimator_trainer(
-            synth_encoded_np,
-            synth_encoded_np[: int(split * synth.shape[0])],
-            synth_encoded_np[int(split * synth.shape[0]):],
-            epochs=epochs,
-            early_stopping=early_stopping,
-            batch_dim=batch_dim,
-        )
+        try:
+            _, p_G_model = density_estimator_trainer(
+                synth_encoded_np,
+                synth_encoded_np[: int(split * synth.shape[0])],
+                synth_encoded_np[int(split * synth.shape[0]):],
+                epochs=epochs,
+                early_stopping=early_stopping,
+                batch_dim=batch_dim,
+            )
 
-        _, p_R_model = density_estimator_trainer(
-            aux_sample_encoded_np,
-            aux_sample_encoded_np[: int(split * aux_sample_encoded_np.shape[0])],
-            aux_sample_encoded_np[int(split * aux_sample_encoded_np.shape[0]):],
-            epochs=epochs,
-            early_stopping=early_stopping,
-            batch_dim=batch_dim,
-        )
+            _, p_R_model = density_estimator_trainer(
+                aux_sample_encoded_np,
+                aux_sample_encoded_np[: int(split * aux_sample_encoded_np.shape[0])],
+                aux_sample_encoded_np[int(split * aux_sample_encoded_np.shape[0]):],
+                epochs=epochs,
+                early_stopping=early_stopping,
+                batch_dim=batch_dim,
+            )
 
-        p_G_evaluated = np.exp(
-            compute_log_p_x(p_G_model, torch.as_tensor(targets_encoded_np).float().to('cpu'))
-            .cpu()
-            .detach()
-            .numpy()
-        )
+            p_G_evaluated = np.exp(
+                compute_log_p_x(p_G_model, torch.as_tensor(targets_encoded_np).float().to('cpu'))
+                .cpu()
+                .detach()
+                .numpy()
+            )
 
-        p_R_evaluated = np.exp(
-            compute_log_p_x(p_R_model, torch.as_tensor(targets_encoded_np).float().to('cpu'))
-            .cpu()
-            .detach()
-            .numpy()
-        )
+            p_R_evaluated = np.exp(
+                compute_log_p_x(p_R_model, torch.as_tensor(targets_encoded_np).float().to('cpu'))
+                .cpu()
+                .detach()
+                .numpy()
+            )
+        except ValueError:
+            continue
 
         p_G_evaluated = np.nan_to_num(p_G_evaluated, nan=1e26)
         p_G_evaluated[np.isinf(p_G_evaluated)] = 1e26
