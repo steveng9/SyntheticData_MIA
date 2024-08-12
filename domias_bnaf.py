@@ -135,14 +135,20 @@ cfg = Config(data, train_size=n_size, set_MI=False, overlapping_aux=True)
 _, aux, columns, meta, _ = get_data(cfg)
 
 
-ordered_columns_idx = [0, 5, 7, 11, 12]
-# ordered_columns_idx = [0, 3, 5, 7, 8, 11, 12, 13]
-ordered_columns = ['age', 'ownchild', 'gradeatn', 'hoursut', 'faminc']
-# ordered_columns = ['age', 'female', 'ownchild', 'gradeatn', 'cow1', 'hoursut', 'faminc', 'mind16']
-categorical_columns_idx = [3, 8, 13]
-categorical_columns = ['female', 'cow1', 'mind16']
-# categorical_columns_idx = [column_idx for column_idx in range(15) if column_idx not in ordered_columns_idx]
-# categorical_columns = [column_name for column_name in meta.name.values.tolist() if column_name not in ordered_columns]
+if data == "snake":
+    ordered_columns_idx = [0, 5, 7, 11, 12]
+    # ordered_columns_idx = [0, 3, 5, 7, 8, 11, 12, 13]
+    ordered_columns = ['age', 'ownchild', 'gradeatn', 'hoursut', 'faminc']
+    # ordered_columns = ['age', 'female', 'ownchild', 'gradeatn', 'cow1', 'hoursut', 'faminc', 'mind16']
+    categorical_columns_idx = [3, 8, 13]
+    categorical_columns = ['female', 'cow1', 'mind16']
+    # categorical_columns_idx = [column_idx for column_idx in range(15) if column_idx not in ordered_columns_idx]
+    # categorical_columns = [column_name for column_name in meta.name.values.tolist() if column_name not in ordered_columns]
+elif data == "cali":
+    ordered_columns_idx = range(9)
+    ordered_columns = [str(x) for x in range(9)]
+    categorical_columns_idx = []
+    categorical_columns = []
 
 meta2 = pd.DataFrame(meta)
 ord_enc = OrdinalEncoder(categories=[meta2.representation.values.tolist()[i] for i in ordered_columns_idx])
