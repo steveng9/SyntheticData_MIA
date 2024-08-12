@@ -585,7 +585,8 @@ def gen_mst(cfg, train, meta, n_synth, eps):
     try:
         mst_gen.run()
         synth = mst_gen.output
-        synth = synth.astype({'age': 'int', 'ownchild': 'int', 'hoursut': 'int'})
+        if "age" in columns:
+            synth = synth.astype({'age': 'int', 'ownchild': 'int', 'hoursut': 'int'})
         return synth
     except ValueError:
         print(f"Error in MST for e{eps}, n{n_synth}")
@@ -597,7 +598,8 @@ def gen_priv(cfg, train, meta, n_synth, eps):
     privbayes_gen = privbayes.PRIVBAYES(dataset=train[columns], metadata=meta, size=n_synth, epsilon=eps)
     privbayes_gen.run()
     synth = privbayes_gen.output
-    synth = synth.astype({'age': 'int', 'ownchild': 'int', 'hoursut': 'int'})
+    if "age" in columns:
+        synth = synth.astype({'age': 'int', 'ownchild': 'int', 'hoursut': 'int'})
     return synth
 
 
@@ -631,7 +633,8 @@ def gen_gsd(cfg, train, meta, n_synth, eps):
     # try:
     encoded_synth, query_ids = algo.fit_dp(PRNGKey(seed), stat_module=stat_module, epsilon=eps, delta=delta)
     synth = decode_data_from_numeric(cfg, encoded_synth.df, minmax_encode_catg=False)
-    synth = synth.astype({'age': 'int', 'ownchild': 'int', 'hoursut': 'int'})
+    if "age" in columns:
+        synth = synth.astype({'age': 'int', 'ownchild': 'int', 'hoursut': 'int'})
     return synth
     # except:
     #     print(f"Error in GSD for e{eps}, n{n_synth}")
