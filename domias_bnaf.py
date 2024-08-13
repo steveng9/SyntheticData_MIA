@@ -160,7 +160,7 @@ if encode_categorical and data == "snake":
 
 def encode_data_for_bnaf(unencoded):
     if data == "cali":
-        return unencoded
+        return unencoded[ordered_columns]
     if data == "snake":
         data_encoded = pd.DataFrame()
         if encode_categorical:
