@@ -124,7 +124,7 @@ import mst
 import privbayes
 
 sys.path.append('private_gsd/')
-from utils.utils_data import Dataset, Domain
+from private_gsd.utils.utils_data import Dataset, Domain
 from stats import Marginals, ChainedStatistics
 from models import GSD
 from jax.random import PRNGKey
@@ -550,7 +550,7 @@ def gen_experiment_D(aux, meta, cfg):
 
         for eps in sorted(epsilons, key=lambda
                 _: rand.random()):  # make random so the tasks are distributed more evenly across each process
-            incomplete = get_shadowsets_incomplete(shadowsets_directory + f"expA/e{fo(eps)}/", eps, expD)
+            incomplete = get_shadowsets_incomplete(shadowsets_directory + f"expD/e{fo(eps)}/", eps, expD)
             if len(incomplete) > 0:
                 finished = False
                 generate_shadowset_for_each_SDG(cfg, aux, meta, shadowsets_directory + f"expD/e{fo(eps)}/",
