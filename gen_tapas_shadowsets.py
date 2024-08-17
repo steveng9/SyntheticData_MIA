@@ -144,10 +144,10 @@ import psutil
 min_HH_size = 5
 
 # DIR = "/Users/golobs/Documents/GradSchool/"
-DIR = "/home/azureuser/"
+DIR = "/home/golobs/"
 
 # shadowsets_directory = DIR + "shadowsets/"
-shadowsets_directory = "/datadrive/shadowsets/"
+shadowsets_directory = "/home/golobs/shadowsets/"
 
 label_matrix_filename = "label_matrix"
 
