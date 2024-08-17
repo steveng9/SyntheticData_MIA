@@ -337,7 +337,7 @@ def determine_target_assignments(aux):
     if experiment == "C":
         assign_experiment_C(aux)
     if experiment == "D":
-        assign_experiment_C(aux)
+        assign_experiment_D(aux)
 
     with open(label_assigned_filename, "a") as f:
         f.write(experiment)
