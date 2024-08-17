@@ -187,6 +187,15 @@ expC = SimpleNamespace(
     exclude={},
 )
 
+expD = SimpleNamespace(
+    s=500,
+    r=30,
+    n=1_000,
+    t=32,
+    exclude={},
+)
+
+
 
 def main():
     cfg = Config("snake")
@@ -257,6 +266,22 @@ def make_directory_structure():
             os.mkdir(directory_)
             dump_artifact({"time": 0.0, "num_sets": 0}, directory_ + "runtime")
 
+    print("making directory structure for experiment D")
+    directory = shadowsets_directory + "expD/"
+    if not os.path.exists(directory):
+        os.mkdir(directory)
+
+    for eps in epsilons:
+        directory = shadowsets_directory + f"expD/e{fo(eps)}/"
+        if not os.path.exists(directory):
+            os.mkdir(directory)
+        for sdg in sdgs:
+            directory_ = directory + f"{sdg}/"
+            if not os.path.exists(directory_):
+                print(f"creating {directory_}")
+                os.mkdir(directory_)
+                dump_artifact({"time": 0.0, "num_sets": 0}, directory_ + "runtime")
+
 
 
 def delete_shadowsets():
@@ -273,6 +298,12 @@ def delete_shadowsets():
     if len(sys.argv) == 2 or sys.argv[2].upper() == "C":
         print()
         delete_shadowsets_in_dir("C", "")
+
+    if len(sys.argv) == 2 or sys.argv[2].upper() == "D":
+        print()
+        for eps in epsilons:
+            delete_shadowsets_in_dir("D", f"e{fo(eps)}")
+
 
 
 def delete_shadowsets_in_dir(experiment, sub_experiment):
@@ -305,6 +336,8 @@ def determine_target_assignments(aux):
         assign_experiment_B(aux)
     if experiment == "C":
         assign_experiment_C(aux)
+    if experiment == "D":
+        assign_experiment_C(aux)
 
     with open(label_assigned_filename, "a") as f:
         f.write(experiment)
@@ -325,6 +358,9 @@ def generate_shadowsets(aux, meta, cfg):
     if experiment == "C":
         gen_experiment_C(aux, meta, cfg)
         print("finished ~C thread.")
+    if experiment == "D":
+        gen_experiment_D(aux, meta, cfg)
+        print("finished ~D thread.")
 
 
 def print_status():
@@ -362,6 +398,18 @@ def print_status():
         total_generated, total_needed = stats_for_experiment("C", "", expC)
         print(
             f"experiment C completed: {total_generated} / {total_needed}... {round(total_generated / total_needed * 100)} %")
+
+    if len(sys.argv) == 2 or sys.argv[2].upper() == "D":
+        print()
+        print("----------------------")
+        total_needed = 0
+        total_generated = 0
+        for eps in epsilons:
+            generated, needed = stats_for_experiment("D", f"e{fo(eps)}", expD)
+            total_needed += needed
+            total_generated += generated
+        print(
+            f"experiment D completed: {total_generated} / {total_needed}... {round(total_generated / total_needed * 100)} %")
 
 
 def stats_for_experiment(experiment, sub_experiment, vars):
@@ -411,6 +459,17 @@ def assign_experiment_C(aux):
     dump_artifact(create_label_matrix(expC.r, expC.s, single_MI_targets),
                   directory + label_matrix_filename + f"_singleMI")
     dump_artifact(create_label_matrix(expC.r, expC.s, set_MI_targets), directory + label_matrix_filename + f"_setMI")
+
+
+def assign_experiment_D(aux):
+    for eps in epsilons:
+        directory = shadowsets_directory + f"expD/e{fo(eps)}/"
+        # TODO: new label matrix for each epsilon?
+        single_MI_targets, set_MI_targets = sample_targets(aux, expD.t)
+        dump_artifact(create_label_matrix(expD.r, expD.s, single_MI_targets),
+                      directory + label_matrix_filename + f"_singleMI")
+        dump_artifact(create_label_matrix(expD.r, expD.s, set_MI_targets),
+                      directory + label_matrix_filename + f"_setMI")
 
 #
 # def gen_matrix_1(r, s, t):
@@ -482,6 +541,20 @@ def gen_experiment_C(aux, meta, cfg):
             finished = False
             generate_shadowset_for_each_SDG(cfg, aux, meta, shadowsets_directory + f"expC/", rand.choice(incomplete),
                                             expC.n, expC.eps, expC.exclude)
+
+
+def gen_experiment_D(aux, meta, cfg):
+    finished = False
+    while not finished:
+        finished = True
+
+        for eps in sorted(epsilons, key=lambda
+                _: rand.random()):  # make random so the tasks are distributed more evenly across each process
+            incomplete = get_shadowsets_incomplete(shadowsets_directory + f"expA/e{fo(eps)}/", eps, expD)
+            if len(incomplete) > 0:
+                finished = False
+                generate_shadowset_for_each_SDG(cfg, aux, meta, shadowsets_directory + f"expD/e{fo(eps)}/",
+                                                rand.choice(incomplete), expD.n, eps, expD.exclude)
 
 
 def generate_shadowset_for_each_SDG(cfg, aux, meta, location, s, n, eps, exclude):
