@@ -124,6 +124,7 @@ import mst
 import privbayes
 
 sys.path.append('private_gsd/')
+# from utils.utils_data import Dataset, Domain
 from private_gsd.utils.utils_data import Dataset, Domain
 from stats import Marginals, ChainedStatistics
 from models import GSD
@@ -147,7 +148,8 @@ min_HH_size = 5
 DIR = "/home/golobs/"
 
 # shadowsets_directory = DIR + "shadowsets/"
-shadowsets_directory = "/home/golobs/shadowsets/"
+# shadowsets_directory = "/home/golobs/shadowsets/"
+shadowsets_directory = "/home/golobs/shadowsets_cali/"
 
 label_matrix_filename = "label_matrix"
 
@@ -155,6 +157,7 @@ label_assigned_filename = shadowsets_directory + "label_matrices_assigned.txt"
 
 rng = default_rng()
 
+DATA = "cali"
 n_sizes = [100, 316, 1_000, 3_162, 10_000, 31_623]
 t_sizes = [10, 18, 32, 56, 100, 178]
 epsilons = [round(10 ** x, 2) for x in np.arange(-1, 3.1, 1 / 2)]
@@ -198,8 +201,11 @@ expD = SimpleNamespace(
 
 
 def main():
-    cfg = Config("snake")
-    _, aux, _, meta, _ = snake_data(cfg)
+    cfg = Config(DATA)
+    if DATA == "snake":
+        _, aux, _, meta, _ = snake_data(cfg)
+    else:
+        _, aux, _, meta, _ = california_data(cfg)
 
     task = sys.argv[1]
     if task == "assign":
@@ -548,13 +554,11 @@ def gen_experiment_D(aux, meta, cfg):
     while not finished:
         finished = True
 
-        for eps in sorted(epsilons, key=lambda
-                _: rand.random()):  # make random so the tasks are distributed more evenly across each process
+        for eps in sorted(epsilons, key=lambda _: rand.random()):  # make random so the tasks are distributed more evenly across each process launched
             incomplete = get_shadowsets_incomplete(shadowsets_directory + f"expD/e{fo(eps)}/", eps, expD)
             if len(incomplete) > 0:
                 finished = False
-                generate_shadowset_for_each_SDG(cfg, aux, meta, shadowsets_directory + f"expD/e{fo(eps)}/",
-                                                rand.choice(incomplete), expD.n, eps, expD.exclude)
+                generate_shadowset_for_each_SDG(cfg, aux, meta, shadowsets_directory + f"expD/e{fo(eps)}/", rand.choice(incomplete), expD.n, eps, expD.exclude)
 
 
 def generate_shadowset_for_each_SDG(cfg, aux, meta, location, s, n, eps, exclude):
