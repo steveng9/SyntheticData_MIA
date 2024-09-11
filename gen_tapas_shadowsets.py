@@ -149,7 +149,8 @@ DIR = "/home/golobs/"
 
 # shadowsets_directory = DIR + "shadowsets/"
 # shadowsets_directory = "/home/golobs/shadowsets/"
-shadowsets_directory = "/home/golobs/shadowsets_cali/"
+# shadowsets_directory = "/home/golobs/shadowsets_cali/"
+shadowsets_directory = "/home/golobs/shadowsets_new_GSD/"
 
 label_matrix_filename = "label_matrix"
 

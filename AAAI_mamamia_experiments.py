@@ -87,7 +87,7 @@ def fp_filename(sdg, epsilon, n, data):
 
 
 def attack_results_filename(location, sdg, epsilon, n, data, overlap, set_MI):
-    return f"{location}results_{sdg}_e{fo(epsilon)}_n{n}_{data}_o{overlap}_set{set_MI}"
+    return f"{location}results_{sdg}_e{fo(epsilon)}_n{n}_{data}_o{overlap}_set{set_MI}_gen100k"
 
 
 def fo(eps):
@@ -255,7 +255,8 @@ def make_directory_structure():
 
 
 def print_status():
-    FPs_completed = open(FP_completed_file, "r").readlines()
+    # FPs_completed = open(FP_completed_file, "r").readlines()
+    FPs_completed = []
 
     print("\nexperiment A")
     for sdg in sdgs:
@@ -291,7 +292,8 @@ def print_status():
 
 
 def print_attack_status(location=results_directory, completed_file=attack_completed_file):
-    attacks_completed = open(completed_file, "r").readlines()
+    # attacks_completed = open(completed_file, "r").readlines()
+    attacks_completed = []
     completed = []
 
     print("\nexperiment A")
