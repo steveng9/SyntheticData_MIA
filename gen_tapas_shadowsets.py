@@ -569,6 +569,10 @@ def generate_shadowset_for_each_SDG(cfg, aux, meta, location, s, n, eps, exclude
         if n in exclude.get(sdg, []) or eps in exclude.get(sdg, []):
             print(f"\tskipping {sdg}, n{n}, e{eps}")
             continue
+        if len(sys.argv) > 3 and sdg != sys.argv[3]:
+            print(f"\tskipping {sdg}, n{n}, e{eps}")
+            continue
+
         shadowset_filename = location + f"{sdg}/s{s}.parquet"
         # TODO: make option to only do one sdg
         if not os.path.isfile(shadowset_filename):
