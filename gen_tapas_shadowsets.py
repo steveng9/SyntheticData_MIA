@@ -158,7 +158,7 @@ label_assigned_filename = shadowsets_directory + "label_matrices_assigned.txt"
 
 rng = default_rng()
 
-DATA = "cali"
+DATA = "snake"
 n_sizes = [100, 316, 1_000, 3_162, 10_000, 31_623]
 t_sizes = [10, 18, 32, 56, 100, 178]
 epsilons = [round(10 ** x, 2) for x in np.arange(-1, 3.1, 1 / 2)]
