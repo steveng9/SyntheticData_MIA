@@ -89,7 +89,7 @@ class Config:
             # GSD parameters
             gsd_k=2,
             gsd_bins=[2, 4, 8, 16, 32],
-            gsd_generations=20_000,
+            gsd_generations=100_000,
     ):
         self.data_name = data_name
         self.n_runs_MA = n_runs_MA

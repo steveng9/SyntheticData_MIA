@@ -83,7 +83,7 @@ def main():
 
 
 def fp_filename(sdg, epsilon, n, data):
-    return f"focalpoints/FP4_{sdg}_e{fo(epsilon)}_n{n}_{data}"
+    return f"focalpoints/FP5_{sdg}_e{fo(epsilon)}_n{n}_{data}"
 
 
 def attack_results_filename(location, sdg, epsilon, n, data, overlap, set_MI):
