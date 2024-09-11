@@ -86,7 +86,7 @@ def determine_gsd_marginals(cfg, aux, columns, catg_cols, meta, eps, n_size, fil
     algo = GSD(domain=data.domain,
                print_progress=True,
                stop_early=True,
-               num_generations=20_000,
+               num_generations=cfg.gsd_generations,
                population_size_muta=50,
                population_size_cross=50,
                sparse_statistics=True,
