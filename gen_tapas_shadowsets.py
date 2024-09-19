@@ -1,106 +1,4 @@
-'''
-1. expB: Generate 500 shadowsets, each using e = 10.
-    - GSD, MST, PrivBayes
-    - |Dtrain| = {100, 316, 1000, 3162, 10000, 31622}
-    - Purpose: Plot AUC vs. dataset size. Hopefully this will show that TAPAS and DOMIAS only work well for small dataset sizes, and will show when MAMA-MIA overtakes both for which size dataset. Also, I believe DOMIAS uses |Dtrain| = 100 in experiments. Meeus et al. uses |Dtrain| = 1000. SNAKE uses |Dtrain| = 10000. So using all these sizes would provide a more well-rounded comparison to those papers.
-2. expA: Generate 500 shadowsets, each one from Dtrain based on half (10,000 records). Find a way to use each of the 20,000 records exactly half of the time.
-    - GSD, MST, PrivBayes
-    - e = {10^i/2 | -2 <= i <= 6 } (9 values) (exlude e == 10, since you already have these from (1.)).
-3. expC: Generate 4000 for optimal TAPAS representation
-    - GSD, MST, PrivBayes
-    - |Dtrain| = ? (determine based on other attack accuracies for TAPAS and MAMA-MIA)
-    - e = ? (10?)
-For each of these, generate 30 ~ 100 more shadowsets for evaluation?
 
-
-Process:
-
-1. r = number of trials, r = 30?
-   t = number of targets, t = 100?
-   n = size of D_train, n = 10,000
-   s = number of shadowsets, s = 500?
-
-For only SINGLE MI:
-2. For each task, generate s shadowsets:
-    a. sample r x t records. (3,000)
-        - record these
-    b. split them into r target sets of size t
-        - record these
-    c. For each trial r, create an s x t "single MI label matrix"
-    d. for each shadowset, sample n records from {D_aux / {all targets}}. Drop z = len(label_matrix[r][s]) records (~1500), and then append those targets. This is D_train
-        - shuffle D_train
-        - record which records are in D_train
-        - generate D_synth using D_train
-
-
-For SET MI and SINGLE MI:
-2. For each task, generate s shadowsets:
-    a. sample t households. (100 HHs, == ~550 records).
-        - Record these
-    b. sample r x t records not in (a.) (3,000)
-        - record these
-    c. split them into r target sets of size t (reuse the t HHs for each trial)
-        - record these
-    d. For each trial r, create an s x t "set MI label matrix"
-       and an s x t "single MI label matrix"
-    e. for each shadowset, sample n records from {D_aux / {all targets}}. Drop z+y = len(single_label_matrix[r][s]) + len(set_label_matrix[r][s]) records (~50+ 275),
-       and then append those targets. This is D_train
-        - shuffle D_train
-        - record which records are in D_train
-        - generate D_synth using D_train
-
-
-IMPORTANT: use the same label matrix for each SDG, for consistency (so each SDG uses same D_train)
-
-If t = number of targets, t = 10?
-   n = size of D_train, n = 100
-   s = number of shadowsets, s = 500?
-
-   Then z+y = (10 x 30 / ~2) + (10 x ~5.5 / ~2) = ~150 + ~28 = 178
-
-   or, if we reuse targets for single and set MI:
-
-   Then z+y = (10 / ~2) + (10 x ~5.5 / ~2) = ~5 + ~28 = 33
-
-Reuse same targets for each trial?
-
-
-Dataset Sizes:
-D_train     D_synth     D_target    D_member
-100         100         10          5
-316         316         18
-1,000       1,000       32
-3,162       3,162       56
-10,000      10,000      100
-31,623      31,623      178
-
-
-
-
-How do I split the VMs up?
-    - 3 VMs, easier to manage. Use several CPUs to generate sets in parallel
-    - by sdg
-        - all use same memory amount?
-        - harder to merge attack results
-        - only have to get GSD working on one server
-    - by experiment
-        - (expA ~= 500 * 9 * 3 * 10_000 = 135_000_000 records)
-        - (expB ~= 500 * 3 * x, x in D_size = 69_301_500 records)
-        - (expC ~= 4_000 * 3 * 10_000 = 120_000_000 records)
-        - can't reuse shadowsets for different experiments
-        - the disparate gen times for sgds will be spread across servers, and evened out
-
-        memory required:
-        MB_per_record = 50.7 / 202000
-        print(135_000_000 * MB_per_record) = 33883 MB
-        print(69_301_500 * MB_per_record) = 17393 MB
-        print(120_000_000 * MB_per_record) = 30118 MB
-
-
-
-
-
-'''
 
 import os, re
 import sys
@@ -145,12 +43,13 @@ import psutil
 min_HH_size = 5
 
 # DIR = "/Users/golobs/Documents/GradSchool/"
-DIR = "/home/golobs/"
+# DIR = "/home/golobs/"
+DIR = "/"
 
-# shadowsets_directory = DIR + "shadowsets/"
+shadowsets_directory = DIR + "shadowsets/"
 # shadowsets_directory = "/home/golobs/shadowsets/"
 # shadowsets_directory = "/home/golobs/shadowsets_cali/"
-shadowsets_directory = "/home/golobs/shadowsets_new_GSD/"
+# shadowsets_directory = "/home/golobs/shadowsets_new_GSD/"
 
 label_matrix_filename = "label_matrix"
 
@@ -442,7 +341,6 @@ def stats_for_experiment(experiment, sub_experiment, vars):
 def assign_experiment_A(aux):
     for eps in epsilons:
         directory = shadowsets_directory + f"expA/e{fo(eps)}/"
-        # TODO: new label matrix for each epsilon?
         single_MI_targets, set_MI_targets = sample_targets(aux, expA.t)
         dump_artifact(create_label_matrix(expA.r, expA.s, single_MI_targets),
                       directory + label_matrix_filename + f"_singleMI")
@@ -471,23 +369,11 @@ def assign_experiment_C(aux):
 def assign_experiment_D(aux):
     for eps in epsilons:
         directory = shadowsets_directory + f"expD/e{fo(eps)}/"
-        # TODO: new label matrix for each epsilon?
         single_MI_targets, set_MI_targets = sample_targets(aux, expD.t)
         dump_artifact(create_label_matrix(expD.r, expD.s, single_MI_targets),
                       directory + label_matrix_filename + f"_singleMI")
         dump_artifact(create_label_matrix(expD.r, expD.s, set_MI_targets),
                       directory + label_matrix_filename + f"_setMI")
-
-#
-# def gen_matrix_1(r, s, t):
-#     assert False, "not yet implemented"
-#     assert not t % 2 and not s % 2
-#     print("config 1: each shadowset has half of the targets")
-#     label_list = [np.sort(rng.choice(s, size=s // 2, replace=False)) for _ in range(t)]
-#     label_matrix = np.zeros((t, s), dtype=bool)
-#     for i in range(t):
-#         label_matrix[i][label_list[i]] = True
-#     label_matrix_T = np.swapaxes(label_matrix, 0, 1)
 
 
 def gen_matrix_2(r, s, targets):
@@ -501,14 +387,6 @@ def gen_matrix_2(r, s, targets):
     label_matrix = np.swapaxes(label_matrix_T, 0, 1)
 
     return pd.DataFrame(label_matrix_T, columns=targets)
-
-#
-# def gen_matrix_3(r, s, targets):
-#     assert False, "not yet implemented"
-#     assert not t % 2 and not s % 2
-#     print("config 3: each shadowset has a random number of targets (TAPAS)")
-#     label_matrix_T = [np.random.randint(2, size=t) == 1 for _ in range(s)]
-#     label_matrix = np.swapaxes(label_matrix_T, 0, 1)
 
 
 def gen_experiment_A(aux, meta, cfg):

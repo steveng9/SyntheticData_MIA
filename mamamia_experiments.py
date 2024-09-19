@@ -40,7 +40,8 @@ import psutil
 min_HH_size = 5
 
 # DIR = "/Users/golobs/Documents/GradSchool/"
-DIR = "/home/golobs/"
+# DIR = "/home/golobs/"
+DIR = "/"
 
 # FPs_directory = DIR + "focalpoints/"
 # results_directory = DIR + "focalpoints/"
@@ -247,10 +248,6 @@ def mama_mia():
     sdg_method = sdg_methods[sdg]
 
     experiment_method(sdg, sdg_method)
-
-
-def make_directory_structure():
-    assert False, "Not yet implemented!"
 
 
 

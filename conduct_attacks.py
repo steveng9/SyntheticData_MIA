@@ -50,21 +50,6 @@ def attack_experiments(sdgs, cfg):
                     "arbitrary_MA": [],
                     "distance": []
                 }
-    # results = load_artifact(results_filename) or {
-    # eps: {
-    #     sdg: {
-    #         "KDE_MA": [],
-    #         "KDE_AUC": [],
-    #         "KDE_time": [],
-    #         "custom_MA": [],
-    #         "custom_AUC": [],
-    #         "custom_MA_weighted": [],
-    #         "custom_AUC_weighted": [],
-    #         "custom_time": [],
-    #         "arbitrary_MA": [],
-    #         "distance": []
-    #     } for sdg in sdgs.keys()
-    # } for eps in cfg.epsilons}
 
     print(f"\n{cfg.data_name}, {cfg.set_MI}, EPS: ", end="")
     for eps in cfg.epsilons:
@@ -104,7 +89,7 @@ def attack_experiments(sdgs, cfg):
 
 
 
-## DOMIAS Proper
+## DOMIAS (using KDE) Proper
 ##-------------------------
 
 def kde_get_ma(cfg, aux, synth, targets, target_ids, membership, sample_seed):

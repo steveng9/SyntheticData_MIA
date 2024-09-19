@@ -20,8 +20,8 @@ import pandas as pd
 
 ## Specify directory to store results here
 # DATA_DIR = "/Users/golobs/Documents/GradSchool/"
-DATA_DIR = "/home/azureuser/"
-
+# DATA_DIR = "/home/azureuser/"
+DATA_DIR = "/"
 
 
 # constants
@@ -46,14 +46,12 @@ C = SimpleNamespace(
 
 
 def dump_artifact(artifact, name):
-#    pickle_file = open(DATA_DIR + f'Thesis/experiment_artifacts/{name}', 'wb')
     pickle_file = open(DATA_DIR + f'experiment_artifacts/{name}', 'wb')
     pickle.dump(artifact, pickle_file)
     pickle_file.close()
 
 def load_artifact(name):
     try:
-#        pickle_file = open(DATA_DIR + f'Thesis/experiment_artifacts/{name}', 'rb')
         pickle_file = open(DATA_DIR + f'experiment_artifacts/{name}', 'rb')
         artifact = pickle.load(pickle_file)
         pickle_file.close()
@@ -260,7 +258,7 @@ def decode_data_from_numeric(cfg, data, minmax_encode_catg=True):
 # convert and sample data into numeric form for KDE measurement
 def encode_data_KDE(cfg, aux, synth, targets, target_ids, sample_seed):
     target_exclusion_list = aux.HHID.isin(target_ids) if cfg.set_MI else aux.index.isin(target_ids)
-    aux_sample = aux[~target_exclusion_list].sample(n=synth.shape[0], random_state=sample_seed)  # TODO: see if density is n-independent (try huge n for aux_sample)
+    aux_sample = aux[~target_exclusion_list].sample(n=synth.shape[0], random_state=sample_seed)
     if C.samples_append_targets: aux_sample = pd.concat([aux_sample, targets]).sample(frac=1)  # shuffle
     encoded_synth = encode_data_all_numeric(cfg, synth, keep_indeces=False)
     encoded_targets = encode_data_all_numeric(cfg, targets, keep_indeces=False)
