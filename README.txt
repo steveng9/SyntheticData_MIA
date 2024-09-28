@@ -1,6 +1,5 @@
 
 MAMA MIA Experiments
-(September 9, 2024)
 --------------------
 
 
@@ -65,10 +64,10 @@ These experiments are created to operate over two datasets. One is the Californi
 Housing Dataset, which is included in the sklearn library, and will load into memory
 simply if sklearn is installed and connected to the internet.
 
-The other dataset, 'base.parquet', and 'meta.json', are the SNAKE data files described
-in the technical paper accompanying this submission. Both will be included in the
-zip file containing this code. They must be organized into a file structure
-for this code to recognize.
+The other dataset, 'SNAKE/base.parquet', and 'SNAKE/meta.json', are the files for the
+SNAKE data described in the technical paper accompanying this submission. Both are
+included in this repository. They must be organized into a file structure for this
+code to recognize.
 
 
 Reprosyn, Private-GSD and Relaxed-Adaptive-Projection modules:
@@ -78,7 +77,7 @@ Our experiments use default implementations of MST, PrivBayes from the Reprosyn 
 from the authors' repository (https://github.com/giusevtr/private_gsd) and an
 implementation RAP from the authors' repository
 (https://github.com/amazon-science/relaxed-adaptive-projection). However, in order
-to measure the behaviors needed for shadow modelling, in the firststep, we
+to measure the behaviors needed for shadow modelling, in the first step, we
 need to infiltrate the code, not to modify behavior, but to record internal
 behavior. To be clear, we are not learning internal behavior when training on the 'hidden'
 training data in our experiments. That would violate our threat model. But rather, we
@@ -88,9 +87,9 @@ auxiliary data, to learn what ~might~ have happened when operating over the hidd
 So to this end, we copy these three repositories into this code base, and they are in
 separate folders at the root directory of this zip file.
 
-Lastly, godspeed to you. It is regretful that we cannot be at your side to aid you in
-running this code as issues arise. But the utmost care was taken in keeping things neat,
-modularized, readable, and reproducible. However, this code base was developed by a team
-of few. And surely, habitual behavior eventually became required to execute this code to
-its fullest potential. Thank you for reading.
+It is regretful that we cannot be at your side to aid you in running this code as issues
+arise. But the utmost care was taken in keeping things neat, modularized, readable,
+and reproducible. However, this code base was developed by a team of few. And surely,
+habitual behavior eventually became required to execute this code to its fullest
+potential. Thank you for reading.
 
