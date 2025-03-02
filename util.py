@@ -13,7 +13,7 @@ from scipy import stats
 from matplotlib import pyplot
 from functools import reduce
 
-from sklearn.metrics import confusion_matrix, roc_curve, auc
+from sklearn.metrics import confusion_matrix, roc_curve, auc, roc_auc_score
 from sklearn.datasets import fetch_california_housing
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, MinMaxScaler, OrdinalEncoder
 
@@ -37,7 +37,7 @@ from jax import numpy as jnp, random
 
 expA = SimpleNamespace(
     r=30,
-    n=10_000,
+    n=1_000,
     t=100,
     exclude={},
 )
@@ -55,6 +55,14 @@ expD = SimpleNamespace(
     exclude={}
 )
 
+expE = SimpleNamespace(
+    r=30,
+    eps=1000,
+    n=20_000,
+    t=200,
+    exclude={}
+)
+
 # Experimental Configuration
 class Config:
     def __init__(
@@ -62,7 +70,7 @@ class Config:
             data_name,
             n_runs_MA=30,
             # train_sizes={100: 10, 316: 26, 1_000: 64, 3162: 160, 10_000: 400, 31_622: 1000},
-            train_sizes={100: 10, 316: 18, 1_000: 32, 3162: 56, 10_000: 100, 31_623: 178},
+            train_sizes={100: 10, 316: 18, 1_000: 32, 3162: 56, 10_000: 100, 31_623: 178, 20_000: 200},
             train_size=1_000,
             set_MI=False,
             household_min_size=5,
@@ -206,6 +214,8 @@ def get_data(cfg):
         return california_data(cfg)
     if cfg.data_name == "snake":
         return snake_data(cfg)
+    if cfg.data_name == "berka":
+        return berka_transaction_data(cfg)
     return None
 
 
@@ -429,5 +439,12 @@ def score_attack(cfg, A, num_queries_used, targets, target_ids, membership, acti
     MA = membership_advantage(membership, activated_scores)
     AUC = area_under_curve(membership, activated_scores)
 
-    return predictions, MA, AUC
+    return predictions, MA, AUC, (membership, activated_scores)
 
+
+def get_tpr_at_fpr(y_true, y_pred):
+    desired_fpr = 0.1
+    fpr, tpr, thresholds = roc_curve(y_true, y_pred)
+    tpr_at_desired_fpr = np.interp(desired_fpr, fpr, tpr)
+    auc = roc_auc_score(y_true, y_pred)
+    return tpr_at_desired_fpr, auc

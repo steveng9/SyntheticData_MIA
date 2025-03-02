@@ -107,11 +107,11 @@ def kde_get_ma(cfg, aux, synth, targets, target_ids, membership, sample_seed):
         # Score
         A = p_synth_evaluated / (p_aux_evaluated + 1e-20)
 
-        predictions, MA, AUC = score_attack(cfg, A, [1]*targets.shape[0], targets, target_ids, membership)
+        predictions, MA, AUC, ROC_scores = score_attack(cfg, A, [1]*targets.shape[0], targets, target_ids, membership)
 
         end_time = time.process_time()
 
-        return MA, AUC, end_time - start_time
+        return MA, AUC, end_time - start_time, ROC_scores
     except np.linalg.LinAlgError:
         print("Error in calculating KDE.")
         return None, None, None
@@ -121,25 +121,26 @@ def kde_get_ma(cfg, aux, synth, targets, target_ids, membership, sample_seed):
 ##-------------------------
 
 
-def attack_mst(cfg, meta, aux, columns, train, eps, targets, target_ids, membership, kde_sample_seed, fps):
+def attack_mst(cfg, meta, aux, columns, train, eps, targets, target_ids, membership, kde_sample_seed, fps, synth=None):
     mst_gen = mst.MST(dataset=train[columns], metadata=meta, size=cfg.synth_size, epsilon=eps)
     try:
-        mst_gen.run()
-        synth = mst_gen.output
+        if synth is None:
+            mst_gen.run()
+            synth = mst_gen.output
 
-        if cfg.data_name == "snake":
-            synth = synth.astype({'age': 'int', 'ownchild': 'int', 'hoursut': 'int'})
-        elif cfg.data_name == "cali":
-            synth = synth.astype(int)
+            if cfg.data_name == "snake":
+                synth = synth.astype({'age': 'int', 'ownchild': 'int', 'hoursut': 'int'})
+            else:
+                synth = synth.astype(int)
 
-        kde_ma, kde_auc, kde_time = kde_get_ma(cfg, aux, synth, targets, target_ids, membership, kde_sample_seed)
-        tailored_ma, tailored_auc, arbitrary_ma, tailored_time = run_all_mst_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership, fps)
-        wd = wasserstein_distance(cfg, train, synth, columns)
+        # kde_ma, kde_auc, kde_time, kde_roc = kde_get_ma(cfg, aux, synth, targets, target_ids, membership, kde_sample_seed)
+        tailored_ma, tailored_auc, arbitrary_ma, tailored_time, tailored_roc = run_all_mst_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership, fps)
+        # wd = wasserstein_distance(cfg, train, synth, columns)
 
-        return kde_ma, kde_auc, kde_time, None, None, tailored_ma, tailored_auc, tailored_time, arbitrary_ma, wd
+        return None, None, None, None, None, tailored_ma, tailored_auc, tailored_time, arbitrary_ma, None, None, tailored_roc
     except ValueError:
         print("Error in running MST.")
-        return None, None, None, None, None, None, None, None, None, None
+        return None, None, None, None, None, None, None, None, None, None, None, None
 
 
 def attack_privbayes(cfg, meta, aux, columns, train, eps, targets, target_ids, membership, kde_sample_seed, fps):
@@ -157,11 +158,11 @@ def attack_privbayes(cfg, meta, aux, columns, train, eps, targets, target_ids, m
         synth = synth.astype(int)
 
     # conduct experiments
-    kde_ma, kde_auc, kde_time = kde_get_ma(cfg, aux, synth, targets, target_ids, membership, kde_sample_seed)
-    tailored_ma, tailored_auc, arbitrary_ma, tailored_time = run_all_privbayes_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership, fps)
+    kde_ma, kde_auc, kde_time, kde_roc = kde_get_ma(cfg, aux, synth, targets, target_ids, membership, kde_sample_seed)
+    tailored_ma, tailored_auc, arbitrary_ma, tailored_time, tailored_roc = run_all_privbayes_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership, fps)
     wd = wasserstein_distance(cfg, train, synth, columns)
 
-    return kde_ma, kde_auc, kde_time, None, None, tailored_ma, tailored_auc, tailored_time, arbitrary_ma, wd
+    return kde_ma, kde_auc, kde_time, None, None, tailored_ma, tailored_auc, tailored_time, arbitrary_ma, wd, kde_roc, tailored_roc
     # except:
     #     print("Error in running PrivBayes.")
     #     return None, None, None, None, None, None, None, None, None, None
@@ -213,11 +214,11 @@ def attack_gsd(cfg, meta, aux, columns, train, eps, targets, target_ids, members
             synth = synth.astype(int)
 
         all_possible_queries = marginal_module2.queries
-        kde_ma, kde_auc, kde_time = kde_get_ma(cfg, aux, synth, targets, target_ids, membership, kde_sample_seed)
-        tailored_ma, tailored_auc, tailored_ma_w, tailored_auc_w, arbitrary_ma, tailored_time = run_all_gsd_experiments(cfg, all_possible_queries, encoded_aux, encoded_synth, eps, encoded_targets, target_ids, membership, fps)
+        kde_ma, kde_auc, kde_time, kde_roc = kde_get_ma(cfg, aux, synth, targets, target_ids, membership, kde_sample_seed)
+        tailored_ma, tailored_auc, tailored_ma_w, tailored_auc_w, arbitrary_ma, tailored_time, tailored_roc = run_all_gsd_experiments(cfg, all_possible_queries, encoded_aux, encoded_synth, eps, encoded_targets, target_ids, membership, fps)
         wd = wasserstein_distance(cfg, train, synth, columns)
 
-        return kde_ma, kde_auc, kde_time, tailored_ma, tailored_auc, tailored_ma_w, tailored_auc_w, tailored_time, arbitrary_ma, wd
+        return kde_ma, kde_auc, kde_time, tailored_ma, tailored_auc, tailored_ma_w, tailored_auc_w, tailored_time, arbitrary_ma, wd, kde_roc, tailored_roc
     except:
         print("Error in running GSD.")
         return None, None, None, None, None, None, None, None, None, None
@@ -247,7 +248,7 @@ def attack_rap(cfg, meta, aux, columns, train, eps, targets, target_ids, members
     # sanity_ma_verification_queries, sanity_auc, sanity_tailored_ma_sparse, sanity_tailored_auc_sparse, _, _ = run_all_rap_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership, verification_queries=queries_used)
     # print(f"\nReal: {tailored_ma}, Sanity: {sanity_ma_verification_queries}")
 
-    return kde_ma, kde_auc, kde_time, tailored_ma_sparse, tailored_auc_sparse, tailored_ma, tailored_auc, tailored_time, arbitrary_ma, wd
+    return kde_ma, kde_auc, kde_time, tailored_ma_sparse, tailored_auc_sparse, tailored_ma, tailored_auc, tailored_time, arbitrary_ma, wd, kde_roc, tailored_roc
     # except:
     #     print("Error in running RAP.")
     #     return None, None, None, None, None, None, None, None, None, None
@@ -264,16 +265,23 @@ def run_all_mst_experiments(cfg, columns, aux, synth, eps, targets, target_ids, 
     marginals_weights = fps
 
     start_time = time.process_time()
-    scores, tailored_ma, tailored_auc = custom_mst_attack(cfg, eps, aux, synth, targets, target_ids, membership, marginals_weights)
+    if cfg.data_name != "berka":
+        scores, tailored_ma, tailored_auc, ROC_scores = custom_mst_attack(cfg, eps, aux, synth, targets, target_ids, membership, marginals_weights)
+    else:
+        scores, tailored_ma, tailored_auc, ROC_scores = custom_mst_attack_for_berka(cfg, eps, aux, synth, targets, target_ids,
+                                                                          membership, marginals_weights)
     end_time = time.process_time()
     plot_output(scores)
 
     arbitrary_FP_ma = None
     if cfg.check_arbitrary_fps:
         arbitrary_marginals = generate_arbitrary_FPs(columns, len(columns)-1, 2, 2)
-        _, arbitrary_FP_ma, _arbitrary_tailored_auc = custom_mst_attack(cfg, eps, aux, synth, targets, target_ids, membership, arbitrary_marginals)
-
-    return tailored_ma, tailored_auc, arbitrary_FP_ma, end_time - start_time
+        if cfg.data_name != "berka":
+            _, arbitrary_FP_ma, _arbitrary_tailored_auc = custom_mst_attack(cfg, eps, aux, synth, targets, target_ids, membership, arbitrary_marginals)
+        else:
+            _, arbitrary_FP_ma, _arbitrary_tailored_auc = custom_mst_attack_for_berka(cfg, eps, aux, synth, targets, target_ids,
+                                                                            membership, arbitrary_marginals)
+    return tailored_ma, tailored_auc, arbitrary_FP_ma, end_time - start_time, ROC_scores
 
 
 def run_all_privbayes_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership, fps):
@@ -281,7 +289,7 @@ def run_all_privbayes_experiments(cfg, columns, aux, synth, eps, targets, target
     conditionals_weights = fps
 
     start_time = time.process_time()
-    scores, tailored_ma, tailored_auc = custom_privbayes_attack(cfg, eps, aux, synth, targets, target_ids, membership, conditionals_weights)
+    scores, tailored_ma, tailored_auc, ROC_scores = custom_privbayes_attack(cfg, eps, aux, synth, targets, target_ids, membership, conditionals_weights)
     end_time = time.process_time()
     plot_output(scores)
 
@@ -293,7 +301,7 @@ def run_all_privbayes_experiments(cfg, columns, aux, synth, eps, targets, target
         arbitrary_conditionals = generate_arbitrary_FPs(columns, len(columns)-1, 1, max_conditional_size)
         _, arbitrary_FP_ma, _arbitrary_tailored_auc = custom_privbayes_attack(cfg, eps, aux, synth, targets, target_ids, membership, arbitrary_conditionals)
 
-    return tailored_ma, tailored_auc, arbitrary_FP_ma, end_time - start_time
+    return tailored_ma, tailored_auc, arbitrary_FP_ma, end_time - start_time, ROC_scores
 
 
 def run_all_gsd_experiments(cfg, all_possible_queries, encoded_aux, encoded_synth, eps, encoded_targets, target_ids, membership, fps):
@@ -301,7 +309,7 @@ def run_all_gsd_experiments(cfg, all_possible_queries, encoded_aux, encoded_synt
     fp_weights = fps
 
     start_time = time.process_time()
-    (scores, tailored_ma, tailored_auc), (scores_w, tailored_ma_w, tailored_auc_w) = custom_gsd_attack(cfg, eps, encoded_aux, encoded_synth, encoded_targets, target_ids, membership, fp_weights)
+    (scores, tailored_ma, tailored_auc, ROC_scores), (scores_w, tailored_ma_w, tailored_auc_w, ROC_scores_w) = custom_gsd_attack(cfg, eps, encoded_aux, encoded_synth, encoded_targets, target_ids, membership, fp_weights)
     end_time = time.process_time()
     plot_output(scores)
 
@@ -311,7 +319,7 @@ def run_all_gsd_experiments(cfg, all_possible_queries, encoded_aux, encoded_synt
         # arbitrary_conditionals = generate_arbitrary_FPs(columns, len(columns)-1, 1, max_conditional_size)
         # _, arbitrary_FP_ma, _arbitrary_tailored_auc = custom_gsd_attack(cfg, eps, aux, synth, targets, target_ids, membership, arbitrary_conditionals)
 
-    return tailored_ma, tailored_auc, tailored_ma_w, tailored_auc_w, arbitrary_FP_ma, end_time - start_time
+    return tailored_ma, tailored_auc, tailored_ma_w, tailored_auc_w, arbitrary_FP_ma, end_time - start_time, ROC_scores_w
 
 
 def run_all_rap_experiments(cfg, columns, aux, synth, eps, targets, target_ids, membership, fps, verification_queries=None):
@@ -398,9 +406,7 @@ def custom_privbayes_attack(cfg, eps, aux, synth, targets, target_ids, membershi
         A += np.array(ratio_conditionals)
         num_queries_used += 1
 
-    scores, MA, AUC = score_attack(cfg, A, num_queries_used, targets, target_ids, membership)
-
-    return scores, MA, AUC
+    return score_attack(cfg, A, num_queries_used, targets, target_ids, membership)
 
 
 def custom_gsd_attack(cfg, eps, encoded_aux, encoded_synth, encoded_targets, target_ids, membership, fp_weights):
@@ -475,3 +481,46 @@ def custom_rap_attack(cfg, eps, aux_encoded, synth, targets, targets_encoded, ta
     return score_attack(cfg, A, num_queries_used, targets, target_ids, membership), score_attack(cfg, A_sparse, num_queries_used_sparse, targets, target_ids, membership)
 
 
+
+def custom_mst_attack_for_berka(cfg, eps, aux, synth, targets, target_ids, membership, marginals_weights):
+    A = np.array([0.0]*targets.shape[0])
+    num_queries_used = np.array([0] * targets.shape[0])
+
+    for marginal, weight in marginals_weights.items():
+        marginal_list = list(marginal)
+        D_synth = synth[marginal_list].value_counts(normalize=True)
+        D_aux = aux[marginal_list].value_counts(normalize=True)
+
+        for i, val in enumerate(targets[marginal_list].values):
+            prop_synth = D_synth.get(tuple(val))
+            if prop_synth == None:
+                distances = np.linalg.norm(synth[marginal_list].values - val, axis=1)
+                closest_idx = np.argsort(distances)[1]
+                prop_synth = D_synth.get(tuple(synth[marginal_list].iloc[closest_idx].values))
+            A[i] += weight * prop_synth / D_aux.get(tuple(val))
+        num_queries_used += 1
+
+    return score_attack(cfg, A, num_queries_used, targets, target_ids, membership)
+
+def custom_mst_SUBMISSION_attack_for_berka(cfg, eps, aux, synth, targets, target_ids, marginals_weights):
+    A = np.array([0.0]*targets.shape[0])
+    num_queries_used = np.array([0] * targets.shape[0])
+
+    for marginal, weight in marginals_weights.items():
+        marginal_list = list(marginal)
+        D_synth = synth[marginal_list].value_counts(normalize=True)
+        D_aux = aux[marginal_list].value_counts(normalize=True)
+
+        for i, val in enumerate(targets[marginal_list].values):
+            prop_synth = D_synth.get(tuple(val))
+            if prop_synth == None:
+                distances = np.linalg.norm(synth[marginal_list].values - val, axis=1)
+                closest_idx = np.argsort(distances)[1]
+                prop_synth = D_synth.get(tuple(synth[marginal_list].iloc[closest_idx].values))
+            A[i] += weight * prop_synth / D_aux.get(tuple(val))
+        num_queries_used += 1
+
+    predictions = pd.Series(A / np.maximum(np.array([1] * targets.shape[0]), num_queries_used))
+    activated_predictions = activate_3(np.array(predictions))
+
+    return activated_predictions

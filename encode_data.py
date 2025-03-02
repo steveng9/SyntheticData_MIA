@@ -19,9 +19,9 @@ import pandas as pd
 
 
 ## Specify directory to store results here
-# DATA_DIR = "/Users/golobs/Documents/GradSchool/"
+DATA_DIR = "/Users/golobs/Documents/GradSchool/Thesis/"
 # DATA_DIR = "/home/azureuser/"
-DATA_DIR = "/"
+# DATA_DIR = "/"
 
 
 # constants
@@ -43,6 +43,7 @@ C = SimpleNamespace(
     samples_append_targets=False,
     rap_bucket_numeric=True,
 )
+
 
 
 def dump_artifact(artifact, name):
@@ -76,6 +77,27 @@ def california_data(cfg):
     cfg.numeric_columns = columns
     cfg.categorical_columns = []
     return None, aux, columns, meta, "cali"
+
+
+def berka_transaction_data(cfg):
+    columns = [str(x) for x in range(8)]
+    meta = [{"name": col, "representation": list(range(C.n_bins))} for col in columns] # TODO is this range correct?
+    aux_raw = pd.read_csv(f"/Users/golobs/PycharmProjects/MIDSTModels/data/auxiliary_inferred/train_no_id.csv")
+    scaler = StandardScaler()
+    scaler = scaler.fit(aux_raw.sample(frac=1))
+    aux_scaled = pd.DataFrame(scaler.transform(aux_raw.sample(frac=1)), columns=columns)
+
+    dump_artifact(scaler, "berka_std_scaler")
+    fit_continuous_features_equaldepth(aux_scaled, "berka")
+    aux = discretize_continuous_features_equaldepth(aux_scaled, "berka")
+    fit_discrete_features_evenly("berka", aux, pd.DataFrame(meta), columns)
+    fit_data_all_numeric("berka", aux, meta, columns, [])
+
+    aux["HHID"] = np.hstack([[i]*cfg.household_min_size for i in range(math.ceil(aux.shape[0] / cfg.household_min_size))])[:aux.shape[0]]
+    meta = [{'name': str(col), 'type': 'finite/ordered', 'representation': range(C.n_bins)} for col in columns]
+    cfg.numeric_columns = columns
+    cfg.categorical_columns = []
+    return None, aux, columns, meta, "berka"
 
 
 def snake_data(cfg):
