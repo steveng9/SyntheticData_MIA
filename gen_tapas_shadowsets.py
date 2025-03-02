@@ -17,9 +17,9 @@ warnings.filterwarnings("ignore")
 sys.path.append('reprosyn-main/src/reprosyn/methods/mbi/')
 # import disjoint_set
 
-import mst
+# import mst
 
-import privbayes
+# import privbayes
 
 sys.path.append('private_gsd/')
 # from utils.utils_data import Dataset, Domain
@@ -42,11 +42,12 @@ import psutil
 
 min_HH_size = 5
 
-# DIR = "/Users/golobs/Documents/GradSchool/"
+DIR = "/Users/golobs/Documents/GradSchool/Thesis/experiment_artifacts/"
 # DIR = "/home/golobs/"
-DIR = "/"
+# DIR = "/"
 
-shadowsets_directory = DIR + "shadowsets/"
+# shadowsets_directory = DIR + "shadowsets/"
+shadowsets_directory = DIR + "shadowsets_new_GSD/"
 # shadowsets_directory = "/home/golobs/shadowsets/"
 # shadowsets_directory = "/home/golobs/shadowsets_cali/"
 # shadowsets_directory = "/home/golobs/shadowsets_new_GSD/"
@@ -78,7 +79,7 @@ expB = SimpleNamespace(
     s=500,
     r=30,
     eps=10,
-    exclude={"gsd": [31_623]}
+    exclude={"gsd": [100, 316, 1000, 3162, 31_623]}
 )
 
 expC = SimpleNamespace(

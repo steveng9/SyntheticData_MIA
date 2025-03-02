@@ -207,6 +207,7 @@ def dump_artifact(artifact, name):
     pickle_file.close()
 
 
+
 def load_artifact(name):
     try:
         pickle_file = open(name, 'rb')
